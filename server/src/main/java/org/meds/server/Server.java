@@ -1,6 +1,5 @@
 package org.meds.server;
 
-import org.meds.Configuration;
 import org.meds.Locale;
 import org.meds.World;
 import org.meds.database.DataStorage;
@@ -11,6 +10,7 @@ import org.meds.server.command.ServerCommandWorker;
 import org.meds.util.DateFormatter;
 import org.meds.util.Random;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
@@ -50,11 +50,6 @@ public class Server {
         try {
             Random.initialize();
 
-            if (!Configuration.load()) {
-                Logging.Info.log("Server startup aborted.");
-                return;
-            }
-
             // Load map data
             MapManager mapManager = applicationContext.getBean(MapManager.class);
             Logging.Info.log("Map is loaded");
@@ -80,6 +75,11 @@ public class Server {
     private DataStorage dataStorage;
     @Autowired
     private Locale locale;
+
+    @Value("${server.ip}")
+    private String serverIp;
+    @Value("${server.port}")
+    private Integer serverPort;
 
     private boolean stopping;
     private String serverStartTime;
@@ -137,7 +137,7 @@ public class Server {
         Logging.Info.log("Waiting for connections...");
 
         try {
-            this.serverSocket = new ServerSocket(Configuration.getInt(Configuration.Keys.Port));
+            this.serverSocket = new ServerSocket(this.serverPort);
         } catch (IOException e) {
             Logging.Fatal.log("An exception on creating the server socket", e);
             return;
