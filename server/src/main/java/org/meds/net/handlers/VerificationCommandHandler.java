@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class VerificationCommandHandler extends CommonClientCommandHandler {
 
     @Autowired
+    private Server server;
+
+    @Autowired
     private SessionContext sessionContext;
 
     @Override
@@ -26,10 +29,10 @@ public class VerificationCommandHandler extends CommonClientCommandHandler {
             packet.add(0);
         } else {
             int clientBuild = data.getInt(0);
-            if (clientBuild < Server.BUILD || clientBuild > Server.MAX_ALLOWED_BUILD) {
+            if (clientBuild < server.getBuildVersion() || clientBuild > server.getMaxAllowedBuildVersion()) {
                 packet.add(0);
             } else {
-                packet.add(Server.BUILD).add(sessionContext.getSession().getKey());
+                packet.add(server.getBuildVersion()).add(sessionContext.getSession().getKey());
             }
         }
 
