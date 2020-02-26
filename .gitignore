@@ -9,4 +9,4 @@
 src/main/resources/hibernate.cfg.xml
 
 # Maven Target directory
-target/*
+target/
