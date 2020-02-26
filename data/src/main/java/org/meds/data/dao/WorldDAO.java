@@ -45,8 +45,6 @@ public interface WorldDAO {
 
     ItemTemplate getItemTemplate(int id);
 
-    List<LevelCost> getLevelCosts();
-
     List<QuestTemplate> getQuestTemplates();
 
     QuestTemplate getQuestTemplate(int id);

@@ -110,11 +110,6 @@ public class HibernateWorldDAO extends HibernateDAO implements WorldDAO {
     }
 
     @Override
-    public List<LevelCost> getLevelCosts() {
-        return openSession().createCriteria(LevelCost.class).list();
-    }
-
-    @Override
     public List<QuestTemplate> getQuestTemplates() {
         return openSession().createCriteria(QuestTemplate.class).list();
     }

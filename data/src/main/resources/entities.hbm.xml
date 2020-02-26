@@ -527,18 +527,6 @@
         </property>
     </class>
 
-    <class name="org.meds.data.domain.LevelCost" table="level_cost">
-        <id name="level" type="int" column="level" >
-            <generator class="assigned"/>
-        </id>
-        <property name="experience" type="int">
-            <column name="experience" />
-        </property>
-        <property name="gold" type="int">
-            <column name="gold" />
-        </property>
-    </class>
-
     <class name="org.meds.data.domain.LocaleString" table="`locale_string`">
         <id name="id" type="int" column="id">
             <generator class="assigned" />

@@ -3,7 +3,6 @@ package org.meds.database;
 import org.meds.data.dao.DAOFactory;
 import org.meds.data.dao.WorldDAO;
 import org.meds.data.domain.*;
-import org.meds.data.domain.LevelCost;
 import org.meds.database.repository.*;
 import org.meds.logging.Logging;
 import org.meds.net.ServerCommands;
@@ -38,8 +37,6 @@ public class DataStorage {
     private GuildRepository guildRepository;
     @Autowired
     private ItemTemplateRepository itemTemplateRepository;
-    @Autowired
-    private LevelCostRepository levelCostRepository;
     @Autowired
     private NewMessageRepository newMessageRepository;
     @Autowired
@@ -100,11 +97,6 @@ public class DataStorage {
         List<ItemTemplate> items = worldDAO.getItemTemplates();
         itemTemplateRepository.setData(items, ItemTemplate::getId);
         Logging.Info.log("Loaded " +itemTemplateRepository.size() + " items");
-
-        // Level Costs
-        List<LevelCost> levelCosts = worldDAO.getLevelCosts();
-        levelCostRepository.setData(levelCosts, LevelCost::getLevel);
-        Logging.Info.log("Loaded " + levelCostRepository.size() + " level costs");
 
         // New Messages
         List<NewMessage> messages = worldDAO.getNewMessages();
