@@ -6,7 +6,6 @@ import org.meds.data.dao.DAOFactory;
 import org.meds.data.domain.*;
 import org.meds.data.domain.Currency;
 import org.meds.database.BiRepository;
-import org.meds.database.LevelCost;
 import org.meds.database.Repository;
 import org.meds.enums.*;
 import org.meds.item.Item;
@@ -14,6 +13,7 @@ import org.meds.item.ItemTitleConstructor;
 import org.meds.map.Location;
 import org.meds.net.ServerCommands;
 import org.meds.net.ServerPacket;
+import org.meds.player.LevelCost;
 import org.meds.profession.Profession;
 import org.meds.spell.Aura;
 import org.meds.util.EnumFlags;
@@ -56,7 +56,7 @@ public class Player extends Unit {
 
                     // HACK: the limit (or even its existence) is unknown
                     // Cannot get exp more than a half of the next level requirement
-                    int nextLevelEpx = LevelCost.getExp(killerLevel + 1);
+                    int nextLevelEpx = levelCost.getLevelExp(killerLevel + 1);
                     if (exp > nextLevelEpx / 2) exp = nextLevelEpx / 2;
 
                     if (exp > 0) {
@@ -98,6 +98,8 @@ public class Player extends Unit {
     private ItemTitleConstructor itemTitleConstructor;
     @Autowired
     private AchievementManager achievementManager;
+    @Autowired
+    private LevelCost levelCost;
 
     protected static final int SaveTime = 60000;
     protected static final int SyncTime = 20000;
@@ -325,7 +327,7 @@ public class Player extends Unit {
     private void setExp(int value) {
         this.info.setExp(value);
 
-        int nextLvlExp = LevelCost.getExp(this.getLevel() + 1);
+        int nextLvlExp = this.levelCost.getLevelExp(this.getLevel() + 1);
 
         // Is Level Up
         if (nextLvlExp <= this.getExp()) {
@@ -811,7 +813,7 @@ public class Player extends Unit {
 
         // Next guild lesson
         GuildLesson lesson = guildLessonRepository.get(guildId, charGuild.getLevel() + 1);
-        if (!this.changeCurrency(Currencies.Gold.getValue(), -LevelCost.getGold(this.guildLevel + 1)))
+        if (!this.changeCurrency(Currencies.Gold.getValue(), -levelCost.getLevelGold(this.guildLevel + 1)))
             return;
 
         this.applyGuildImprovement(lesson.getImprovementType1(), lesson.getId1(), lesson.getCount1());

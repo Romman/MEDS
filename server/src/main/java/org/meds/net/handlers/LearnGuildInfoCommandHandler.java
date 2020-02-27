@@ -1,8 +1,8 @@
 package org.meds.net.handlers;
 
 import org.meds.Locale;
-import org.meds.database.LevelCost;
 import org.meds.net.*;
+import org.meds.player.LevelCost;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -15,6 +15,8 @@ public class LearnGuildInfoCommandHandler extends CommonClientCommandHandler {
     private SessionContext sessionContext;
     @Autowired
     private Locale locale;
+    @Autowired
+    private LevelCost levelCost;
 
     @Override
     public void handle(ClientCommandData data) {
@@ -28,9 +30,9 @@ public class LearnGuildInfoCommandHandler extends CommonClientCommandHandler {
         packet.add(-sessionContext.getPlayer().getGuildLevel());
         packet.add(availableCount);
         // Next lesson gold
-        packet.add(LevelCost.getGold(sessionContext.getPlayer().getGuildLevel() + 1));
+        packet.add(levelCost.getLevelGold(sessionContext.getPlayer().getGuildLevel() + 1));
         // Gold for all available lessons
-        packet.add(LevelCost.getTotalGold(sessionContext.getPlayer().getGuildLevel() + 1, sessionContext.getPlayer().getLevel()));
+        packet.add(levelCost.getTotalGold(sessionContext.getPlayer().getGuildLevel() + 1, sessionContext.getPlayer().getLevel() + 1));
 
         // Lessons reset cost
         packet.add(locale.getString(3));
