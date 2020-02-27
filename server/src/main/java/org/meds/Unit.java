@@ -1,9 +1,10 @@
 package org.meds;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.data.domain.Spell;
 import org.meds.database.repository.SpellRepository;
 import org.meds.enums.*;
-import org.meds.logging.Logging;
 import org.meds.map.Location;
 import org.meds.map.MapManager;
 import org.meds.net.ServerCommands;
@@ -19,6 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.*;
 
 public abstract class Unit {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     protected SpellRepository spellRepository;
@@ -241,7 +244,7 @@ public abstract class Unit {
         if (location != null) {
             location.unitEntered(this);
         } else {
-            Logging.Debug.log("%s has new NULL position", toString());
+            logger.debug("{} has new NULL position", toString());
         }
 
         if (this.positionChangedListeners.size() > 0) {
@@ -413,10 +416,11 @@ public abstract class Unit {
         }
 
         /* Physical Hit */
-        Logging.Debug.log("%s random damage from %d up to %d", this.toString(),
-                this.parameters.value(Parameters.Damage), this.parameters.value(Parameters.MaxDamage));
-        int initialDamage = Random.nextInt(
-                this.parameters.value(Parameters.Damage), this.parameters.value(Parameters.MaxDamage));
+        int minDamage = this.parameters.value(Parameters.Damage);
+        int maxDamage = this.parameters.value(Parameters.MaxDamage);
+        logger.debug("{}: evaluating random damage from {} up to {}",
+                this.toString(), minDamage, maxDamage);
+        int initialDamage = Random.nextInt(minDamage, maxDamage);
 
         Damage damage = new Damage(initialDamage, this.target);
         damage.IsAutoAttack = true;
@@ -477,7 +481,8 @@ public abstract class Unit {
 
         this.calculateFinalDamage(damage);
 
-        Logging.Debug.log("%s deals %d damages to %s. Victim's health: %d", this, damage.FinalDamage, victim, victim.getHealth());
+        logger.debug("{} deals {} damages to {}. Victim's health: {}",
+                this, damage.FinalDamage, victim, victim.getHealth());
 
         // No damage
         if (damage.FinalDamage <= 0) {

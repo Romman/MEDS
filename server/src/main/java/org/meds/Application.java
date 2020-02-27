@@ -1,6 +1,7 @@
 package org.meds;
 
-import org.meds.logging.Logging;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.map.MapManager;
 import org.meds.server.Server;
 import org.meds.util.Random;
@@ -13,6 +14,8 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
  */
 public class Application {
 
+    private static Logger logger = LogManager.getLogger();
+
     public static void main(String[] args) {
         ApplicationContext applicationContext = new AnnotationConfigApplicationContext(ApplicationConfig.class);
 
@@ -21,7 +24,7 @@ public class Application {
 
             // Load map data
             MapManager mapManager = applicationContext.getBean(MapManager.class);
-            Logging.Info.log("Map is loaded");
+            logger.info("Map is loaded");
 
             // Load locale
             applicationContext.getBean(Locale.class);
@@ -29,7 +32,7 @@ public class Application {
             Server server = applicationContext.getBean(Server.class);
             server.start();
         } catch (Exception ex) {
-            Logging.Fatal.log("An exception has occurred while starting the Server", ex);
+            logger.fatal("An exception has occurred while starting the Server", ex);
         }
     }
 }

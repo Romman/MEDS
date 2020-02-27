@@ -1,13 +1,16 @@
 package org.meds;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.item.Item;
-import org.meds.logging.Logging;
 import org.meds.map.Location;
 
 import java.util.HashSet;
 import java.util.Set;
 
 public class Corpse {
+
+    private static Logger logger = LogManager.getLogger();
 
     private int id;
     private Set<Item> loot;
@@ -16,7 +19,7 @@ public class Corpse {
     private Location position;
 
     public Corpse(int corpseId, Unit owner) {
-        Logging.Debug.log("Create corpse for " + owner);
+        logger.debug("Creating a corpse for {}", owner);
         this.owner = owner;
         this.id = corpseId;
         setPosition(owner.getPosition());

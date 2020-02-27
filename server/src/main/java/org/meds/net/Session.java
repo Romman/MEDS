@@ -1,10 +1,12 @@
 package org.meds.net;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.meds.Player;
 import org.meds.World;
 import org.meds.data.dao.DAOFactory;
 import org.meds.data.domain.Character;
-import org.meds.logging.Logging;
 import org.meds.server.Server;
 import org.meds.util.DateFormatter;
 import org.meds.util.Random;
@@ -24,6 +26,8 @@ import java.util.*;
 public class Session implements Runnable {
 
     private static final int SOCKET_BUFFER_SIZE = 1024;
+
+    private static Logger logger = LogManager.getLogger();
 
     public interface DisconnectListener extends EventListener {
         public void disconnect(Session session);
@@ -162,13 +166,13 @@ public class Session implements Runnable {
                     disconnect();
                     return;
                 }
-                Logging.Debug.log(toString() + "Received string: " + receivedString);
+                logger.debug("{} Received string: {}", toString(), receivedString);
 
                 List<ClientCommandData> commandDataList;
                 try {
                     commandDataList = packetParser.parse(receivedString);
                 } catch (ClientPacketParseException ex) {
-                    Logging.Warn.log(toString() + " :: Parsing exception :: " + ex.getMessage());
+                    logger.warn("{} :: Parsing exception :: {}", toString(), ex.getMessage());
                     continue;
                 }
 
@@ -178,9 +182,12 @@ public class Session implements Runnable {
                     } catch (ClientCommandHandleException ex) {
                         // Handling failed due to another exception
                         if (ex.getCause() != null) {
-                            Logging.Error.log(toString() + " :: " + ex.getMessage(), ex.getCause());
+                            logger.error(
+                                    new ParameterizedMessage("{} :: Packet handling failed due to inner exception",
+                                            toString()), ex);
                         } else {
-                            Logging.Warn.log(toString() + " :: " + ex.getMessage());
+                            logger.warn("{} :: Packet handling failed to to exception ({})",
+                                    toString(), ex.getMessage());
                         }
                     }
                 }
@@ -189,7 +196,7 @@ public class Session implements Runnable {
         } catch (IOException e) {
             // This exception is expected on server shutdown
             if (!server.isStopping()) {
-                Logging.Error.log(toString() + "An exception while reading a socket.", e);
+                logger.error(toString() + ":: An exception while reading a socket.", e);
                 if (e.getClass() == SocketException.class) {
                     disconnect();
                 }
@@ -207,7 +214,7 @@ public class Session implements Runnable {
             receivedSize = is.read(buffer);
             // End Of Stream / Socket is closed
             if (receivedSize == -1) {
-                Logging.Debug.log(toString() + "Received -1");
+                logger.debug("{} :: Receeved -1. Closing the socket.", toString());
                 return null;
             }
             receivedString += new String(Arrays.copyOf(buffer, receivedSize), "Unicode");
@@ -220,7 +227,7 @@ public class Session implements Runnable {
         try {
             this.socket.close();
         } catch (IOException ex) {
-            Logging.Error.log(toString() + "IOException while trying to close the Session socket", ex);
+            logger.error(toString() + " :: IOException while trying to close the Session socket", ex);
         }
 
         for (DisconnectListener listener : this.listeners) {
@@ -242,9 +249,10 @@ public class Session implements Runnable {
             os = this.socket.getOutputStream();
             byte[] bytes = packetBuffer.getBytes();
             os.write(bytes);
-            Logging.Debug.log(toString() + "Sending data: " + packetBuffer.toString().replace('\u0000', '\n'));
+            logger.debug("{} :: Sending data: {}",
+                    this::toString, () -> packetBuffer.toString().replace('\u0000', '\n'));
         } catch (IOException e) {
-            Logging.Error.log(toString() + "IOException while writing to a socket: " + e.getMessage());
+            logger.error(toString() + " :: IOException writing to a socket:", e);
         } finally {
             // Clean it anyway
             this.packetBuffer.clear();

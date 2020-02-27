@@ -1,5 +1,7 @@
 package org.meds;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.data.dao.DAOFactory;
 import org.meds.data.domain.*;
 import org.meds.data.domain.Currency;
@@ -9,7 +11,6 @@ import org.meds.database.Repository;
 import org.meds.enums.*;
 import org.meds.item.Item;
 import org.meds.item.ItemTitleConstructor;
-import org.meds.logging.Logging;
 import org.meds.map.Location;
 import org.meds.net.ServerCommands;
 import org.meds.net.ServerPacket;
@@ -66,6 +67,8 @@ public class Player extends Unit {
             }
         }
     }
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private DAOFactory daoFactory;
@@ -538,7 +541,7 @@ public class Player extends Unit {
 
     public void logIn(org.meds.net.Session session) {
         if (this.session != null) {
-            Logging.Warn.log(toString() + " assigns a new session with existing one.");
+            logger.warn("{} assigns a new session with existing one.", this);
             this.session.removeDisconnectListener(this.disconnector);
         }
         this.session = session;
@@ -839,8 +842,8 @@ public class Player extends Unit {
                     this.info.getSkills().put(id, characterSkill);
                 }
                 characterSkill.setLevel(characterSkill.getLevel() + count);
-                Logging.Debug.log(this + "has learnt skill id " + id + " and the current level is " +
-                        characterSkill.getLevel());
+                logger.debug("{} has learnt a new level({}) of the skill(id={})",
+                        this, characterSkill.getLevel(), id);
                 break;
             case Spell:
                 CharacterSpell characterSpell = this.info.getSpells().get(id);
@@ -849,8 +852,8 @@ public class Player extends Unit {
                     this.info.getSpells().put(id, characterSpell);
                 }
                 characterSpell.setLevel(characterSpell.getLevel() + count);
-                Logging.Debug.log(this + "has learnt spell id " + id + " and the current level is " +
-                        characterSpell.getLevel());
+                logger.debug("{} has learnt a new level({}) of the spell(id={})",
+                        this, characterSpell.getLevel(), id);
                 // TODO: Message about new level with spell
                 // TODO: Set AutoSpell if not set
                 break;
@@ -909,8 +912,8 @@ public class Player extends Unit {
                 if (characterSkill.getLevel() < 1) {
                     this.info.getSkills().remove(id);
                 }
-                Logging.Debug.log(this + " has removed level of a skill id " + id + " and the current level is " +
-                        characterSkill.getLevel());
+                logger.debug("{} has downgraded the level to {} of the skill {}",
+                        this, characterSkill.getLevel(), id);
                 break;
             case Spell:
                 CharacterSpell characterSpell = this.info.getSpells().get(id);
@@ -920,8 +923,8 @@ public class Player extends Unit {
                 if (characterSpell.getLevel() < 1) {
                     this.info.getSpells().remove(id);
                 }
-                Logging.Debug.log(this + " has removed level of a spell id " + id + " and the current level is " +
-                        characterSpell.getLevel());
+                logger.debug("{} has downgraded the level to {} of the skill {}",
+                        this, characterSpell.getLevel(), id);
                 break;
             default:
                 break;
@@ -1223,7 +1226,7 @@ public class Player extends Unit {
     }
 
     public void interact(Unit unit) {
-        Logging.Debug.log("Player " + this.getName() + " interacts with " + unit.getName());
+        logger.debug("Player {} interacts with {}", getName(), unit.getName());
 
         if (unit.getUnitType() == UnitTypes.Creature) {
             Creature creature = (Creature) unit;
@@ -1302,7 +1305,7 @@ public class Player extends Unit {
     public boolean tryAcceptQuest(int questId) {
         QuestTemplate template = questTemplateRepository.get(questId);
         if (template == null) {
-            Logging.Warn.log("%s tries to accept not existing quest template %d", toString(), questId);
+            logger.warn("{} tries to accept not existing quest template {}", this, questId);
             return false;
         }
 
@@ -1371,7 +1374,7 @@ public class Player extends Unit {
 
         // Auto-Save
         if (this.saverTimer < 0) {
-            Logging.Debug.log("Player save timer executing");
+            logger.debug("Player's {} save timer elapsed.", this);
             save();
             this.saverTimer = SaveTime;
         } else

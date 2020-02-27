@@ -1,6 +1,7 @@
 package org.meds.server.command;
 
-import org.meds.logging.Logging;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.server.Server;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -12,6 +13,8 @@ import java.util.stream.Collectors;
 
 @Component
 public class ServerCommandWorker implements Runnable {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     public Server server;
@@ -33,7 +36,7 @@ public class ServerCommandWorker implements Runnable {
                     return entry.getValue() instanceof CommandHandler;
                 })
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> (CommandHandler) entry.getValue()));
-        Logging.Info.log("ServerCommandWorker: found " + this.commands.size() + " command handlers.");
+        logger.info("ServerCommandWorker: found {} command handlers.", this.commands.size());
 
         server.addStopListener(() -> {
             // Set isStopping value and the World.stop() method
@@ -44,7 +47,7 @@ public class ServerCommandWorker implements Runnable {
 
     @Override
     public void run() {
-        Logging.Debug.log("ServerCommandWorker started");
+        logger.debug("ServerCommandWorker has been started");
         this.scanner = new Scanner(System.in);
         String line;
         try {
@@ -57,8 +60,9 @@ public class ServerCommandWorker implements Runnable {
             }
         } catch (Exception ex) {
             // While stopping the Server any Exception is expected here
-            if (server.isStopping())
-                Logging.Error.log("An exception had occurred while reading the Server Command.", ex);
+            if (server.isStopping()) {
+                logger.error("An exception had occurred while reading the Server Command.", ex);
+            }
         }
     }
 
@@ -67,7 +71,7 @@ public class ServerCommandWorker implements Runnable {
     }
 
     private void handleLine(String line) {
-        Logging.Debug.log("Command entered: " + line);
+        logger.debug("Server command entered: {}", line);
         String[] commandArgs = line.split(" ");
 
         CommandHandler handler = this.commands.get(commandArgs[0]);

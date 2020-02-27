@@ -1,5 +1,7 @@
 package org.meds;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.data.domain.Achievement;
 import org.meds.data.domain.AchievementCriterion;
 import org.meds.data.domain.CharacterAchievement;
@@ -7,7 +9,6 @@ import org.meds.database.Repository;
 import org.meds.enums.AchievementCategories;
 import org.meds.enums.AchievementCriterionTypes;
 import org.meds.enums.Currencies;
-import org.meds.logging.Logging;
 import org.meds.net.ServerCommands;
 import org.meds.net.ServerPacket;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,8 @@ import java.util.*;
 @Component
 @Scope("prototype")
 public class AchievementManager {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private Repository<Achievement> achievementRepository;
@@ -152,9 +155,8 @@ public class AchievementManager {
                 // Add achievement points
                 this.player.changeCurrency(Currencies.Achievement, achievement.getPoints());
                 sendAchievementComplete(achievement, charAchieve);
-                iterator.remove();
-                Logging.Info.log(String.format("%s completes the achievement %d (%s)",
-                        this.player, achievement.getId(), achievement.getTitle()));
+                logger.info("{} completes the achievement {} ({})",
+                        this.player, achievement.getId(), achievement.getTitle());
             }
             // Update Achievement
             else {

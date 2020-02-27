@@ -1,5 +1,7 @@
 package org.meds;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.data.domain.CreatureLoot;
 import org.meds.data.domain.CreatureTemplate;
 import org.meds.database.BiRepository;
@@ -7,7 +9,6 @@ import org.meds.database.Repository;
 import org.meds.enums.*;
 import org.meds.item.Item;
 import org.meds.item.ItemFactory;
-import org.meds.logging.Logging;
 import org.meds.map.Location;
 import org.meds.util.Random;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,8 @@ import java.util.*;
 @Component
 @Scope("prototype")
 public class Creature extends Unit {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private Locale locale;
@@ -377,7 +380,8 @@ public class Creature extends Unit {
         }
 
         if (location == null) {
-            Logging.Error.log("%s (Entry=%d) was not spawned. Location not found or not specified.", toString(), this.getTemplateId());
+            logger.error("{} (Entry={}) was not spawned. Location not found or not specified.",
+                    toString(), this.getTemplateId());
             return;
         }
 

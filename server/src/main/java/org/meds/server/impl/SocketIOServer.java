@@ -1,9 +1,10 @@
 package org.meds.server.impl;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.Locale;
 import org.meds.World;
 import org.meds.database.DataStorage;
-import org.meds.logging.Logging;
 import org.meds.net.Session;
 import org.meds.server.Server;
 import org.meds.server.command.ServerCommandWorker;
@@ -24,6 +25,8 @@ import java.util.*;
  */
 public class SocketIOServer implements Server {
 
+    private static Logger logger = LogManager.getLogger();
+
     private class SessionDisconnect implements Session.DisconnectListener {
         @Override
         public void disconnect(Session session) {
@@ -31,8 +34,8 @@ public class SocketIOServer implements Server {
             if (SocketIOServer.this.isStopping())
                 return;
 
-            Logging.Debug.log("Session disconnected");
             SocketIOServer.this.sessions.remove(session);
+            logger.debug("{} has been disconnected", session);
         }
     }
 
@@ -76,7 +79,7 @@ public class SocketIOServer implements Server {
     public void init() {
         dataStorage.loadRepositories();
         locale.load();
-        Logging.Info.log("Database is loaded.");
+        logger.info("Database is loaded.");
     }
 
     @Override
@@ -125,12 +128,12 @@ public class SocketIOServer implements Server {
 
         new Thread(this.world, "World updater").start();
 
-        Logging.Info.log("Waiting for connections...");
+        logger.info("Waiting for connections...");
 
         try {
             this.serverSocket = new ServerSocket(this.serverPort);
         } catch (IOException e) {
-            Logging.Fatal.log("An exception on creating the server socket", e);
+            logger.fatal("An exception on creating the server socket", e);
             return;
         }
 
@@ -140,14 +143,14 @@ public class SocketIOServer implements Server {
                 Session session = applicationContext.getBean(Session.class, clientSocket);
                 session.addDisconnectListener(this.sessionDisconnector);
                 Thread thread = new Thread(session, "Session " + clientSocket.getInetAddress().toString() + " Worker");
-                Logging.Debug.log("New socket client: " + clientSocket.getInetAddress().toString());
+                logger.debug("New socket client: {}", clientSocket.getInetAddress().toString());
                 this.sessions.put(session, clientSocket);
                 thread.start();
 
             } catch (IOException ex) {
                 // Stopping the Server - the next exception is the expected
                 if (!this.stopping) {
-                    Logging.Error.log("IO Exception while accepting a socket", ex);
+                    logger.error("IO Exception while accepting a socket", ex);
                 }
                 break;
             }
@@ -162,7 +165,7 @@ public class SocketIOServer implements Server {
         try {
             this.serverSocket.close();
         } catch (IOException ex) {
-            Logging.Error.log("IOException while stopping the server socket", ex);
+            logger.error("IOException while stopping the server socket", ex);
         }
 
 
@@ -171,7 +174,7 @@ public class SocketIOServer implements Server {
             try {
                 socket.close();
             } catch (IOException ex) {
-                Logging.Error.log("IOException while closing the session socket", ex);
+                logger.error("IOException while closing the session socket", ex);
             }
         }
 
@@ -179,7 +182,7 @@ public class SocketIOServer implements Server {
         this.stopListeners.forEach(StopListener::stop);
 
         // 5 seconds is enough for World to stop all the updated and save all the players
-        Logging.Info.log("The server will be shut down in 5 seconds...");
+        logger.info("The server will be shut down in 5 seconds...");
         try {
             Thread.sleep(5000);
         } catch (Exception ex) {

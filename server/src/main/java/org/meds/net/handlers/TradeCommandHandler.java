@@ -1,5 +1,8 @@
 package org.meds.net.handlers;
 
+import java.text.MessageFormat;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.Player;
 import org.meds.Trade;
 import org.meds.World;
@@ -8,7 +11,6 @@ import org.meds.item.Item;
 import org.meds.item.ItemFactory;
 import org.meds.item.ItemFlags;
 import org.meds.item.ItemPrototype;
-import org.meds.logging.Logging;
 import org.meds.net.ClientCommandData;
 import org.meds.net.SessionContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @author Romman.
  */
 public abstract class TradeCommandHandler extends CommonClientCommandHandler {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private SessionContext sessionContext;
@@ -58,8 +62,8 @@ public abstract class TradeCommandHandler extends CommonClientCommandHandler {
             }
 
             if (!player.getInventory().hasItem(item)) {
-                Logging.Warn.log("Trade: " +player.toString() + "places item " +
-                        item.getPrototype().toString() + "but he has no this item in the inventory");
+                logger.warn("Trade: {} places an item {} but he does not have the item in the inventory",
+                        player.toString(), item.getPrototype().toString());
                 continue;
             }
             supply.setItem(i, item);
@@ -82,8 +86,7 @@ public abstract class TradeCommandHandler extends CommonClientCommandHandler {
 
         if (isApply()) {
             if (!trade.getCurrentSupply().equals(supply)) {
-                Logging.Warn.log("Trade: " + player.toString() + " agreed to a trade, but his own" +
-                        "supply does not match. The current supply is updated");
+                logger.warn("Trade: {} agreed to trade, but his own supply does not match. The current supply is updated", player.toString());
                 trade.setCurrentSupply(supply);
             }
 

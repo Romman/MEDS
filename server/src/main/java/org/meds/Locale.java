@@ -1,8 +1,9 @@
 package org.meds;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.data.dao.DAOFactory;
 import org.meds.data.domain.LocaleString;
-import org.meds.logging.Logging;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,8 @@ import java.util.Map;
 
 @Component
 public class Locale {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private DAOFactory daoFactory;
@@ -24,7 +27,7 @@ public class Locale {
         for (LocaleString string : localeStrings) {
             this.strings.put(string.getId(), string.getString());
         }
-        Logging.Info.log("Loaded " + localeStrings.size() + " locale strings.");
+        logger.info("Loaded {} locale strings.", localeStrings.size());
     }
 
     public String getString(int id) {

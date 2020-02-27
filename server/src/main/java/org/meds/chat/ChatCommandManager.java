@@ -1,9 +1,10 @@
 package org.meds.chat;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.Player;
 import org.meds.chat.commands.ChatCommand;
 import org.meds.chat.commands.ChatCommandHandler;
-import org.meds.logging.Logging;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
@@ -20,9 +21,11 @@ import java.util.stream.Collectors;
 @Component
 public class ChatCommandManager {
 
+    private static Logger logger = LogManager.getLogger();
+
     @Autowired
     private ApplicationContext applicationContext;
-    
+
     private Map<String, ChatCommandHandler> chatCommands;
 
     public ChatCommandManager() {
@@ -60,7 +63,7 @@ public class ChatCommandManager {
             return;
         }
 
-        Logging.Info.log("Executing chat command \"%s\" for %s", command, player);
+        logger.info("Executing the chat command \"{}\" for a player {}", command, player);
         chatCommandHandler.handle(player, args);
     }
 

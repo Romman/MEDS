@@ -1,11 +1,12 @@
 package org.meds.map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.Player;
 import org.meds.data.domain.ItemTemplate;
 import org.meds.data.domain.ShopItem;
 import org.meds.database.Repository;
 import org.meds.item.*;
-import org.meds.logging.Logging;
 import org.meds.net.ServerCommands;
 import org.meds.net.ServerPacket;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,8 @@ import java.util.Set;
 @Component
 @Scope("prototype")
 public class Shop {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private Repository<ItemTemplate> itemTemplateRepository;
@@ -35,12 +38,13 @@ public class Shop {
         for (ShopItem item : this.entry.getItems()) {
             ItemTemplate template = itemTemplateRepository.get(item.getItemTemplateId());
             if (template == null) {
-                Logging.Warn.log("Shop " + this.entry.getId() + " has item with template=" + item.getItemTemplateId() + " which does not exist. Skipped.");
+                logger.warn("Shop {} has an item with a templateId={} which does not exist. Skipped.",
+                        this.entry.getId(), item.getItemTemplateId());
                 continue;
             }
             this.items.put(template, item.getCount());
         }
-        Logging.Info.log("Shop " + this.entry.getId() + ": loaded with " + this.items.size() + " items.");
+        logger.info("Shop {}: loaded with {} items.", this.entry.getId(), this.items.size());
     }
 
     public Set<ShopItem> getItems() {

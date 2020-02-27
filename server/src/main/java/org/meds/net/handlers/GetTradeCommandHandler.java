@@ -1,9 +1,10 @@
 package org.meds.net.handlers;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.Player;
 import org.meds.Trade;
 import org.meds.World;
-import org.meds.logging.Logging;
 import org.meds.net.ClientCommandData;
 import org.meds.net.ClientCommandTypes;
 import org.meds.net.SessionContext;
@@ -14,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 @ClientCommand(ClientCommandTypes.GetTrade)
 public class GetTradeCommandHandler extends CommonClientCommandHandler {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private SessionContext sessionContext;
@@ -41,8 +44,8 @@ public class GetTradeCommandHandler extends CommonClientCommandHandler {
             if (trader.getTrade() != null) {
                 // The other side of the trade is this player
                 if (trader.getTrade().getOtherSide().getPlayer() == player) {
-                    Logging.Warn.log(toString() + " has not trade, but " + trader.toString() + " has a trade" +
-                            "where the other side is the current player.");
+                    logger.warn("{} has not trade, but {} has a tradewhere the other side is the current player.",
+                            toString(), trader.toString());
                     // Send the existing trade data
                     player.setTrade(trader.getTrade().getOtherSide());
                     player.getTrade().sendTradeData();

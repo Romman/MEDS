@@ -12,30 +12,16 @@
         <RollingFile name="File" fileName="${filename}" filePattern="logs/server-%d{dd-MM-yyyy}-%i.log">
             <Policies>
                 <OnStartupTriggeringPolicy />
-                <SizeBasedTriggeringPolicy size="20 MB" />
+                <SizeBasedTriggeringPolicy size="100 MB" />
                 <TimeBasedTriggeringPolicy />
             </Policies>
             <PatternLayout pattern="${filePattern}"/>
         </RollingFile>
     </Appenders>
     <Loggers>
-        <Logger name="Debug" level="debug">
-            <AppenderRef ref="Console" />
-        </Logger>
-        <Logger name="Info" level="info">
-            <AppenderRef ref="Console" />
-        </Logger>
-        <Logger name="Warn" level="warn">
-            <AppenderRef ref="Console" />
-        </Logger>
-        <Logger name="Error" level="error">
-            <AppenderRef ref="Console" />
-        </Logger>
-        <Logger name="Fatal" level="fatal">
-            <AppenderRef ref="Console" />
-        </Logger>
-        <Root level="debug">
+        <Root level="info">
             <AppenderRef ref="File"/>
+            <AppenderRef ref="Console" />
         </Root>
     </Loggers>
 </Configuration>

@@ -1,10 +1,11 @@
 package org.meds;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.data.dao.DAOFactory;
 import org.meds.data.domain.CreatureTemplate;
 import org.meds.database.Repository;
 import org.meds.enums.CreatureTypes;
-import org.meds.logging.Logging;
 import org.meds.map.MapManager;
 import org.meds.net.ServerCommands;
 import org.meds.net.ServerPacket;
@@ -18,6 +19,8 @@ import java.util.*;
 
 @Component
 public class World implements Runnable {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -77,7 +80,8 @@ public class World implements Runnable {
 
         this.players.put(player.getId(), player);
         this.units.put(player.getId(), player);
-        Logging.Debug.log("World adds a new " + player);
+
+        logger.debug("World: adding a new {}", player);
         this.addPlayersPacket.add(ServerCommands.PlayersListAdd)
             .add(player.getId())
             .add(player.getName())
@@ -89,14 +93,14 @@ public class World implements Runnable {
             .add(player.getClanId())
             .add(player.getClanMemberStatus())
             .add("0"); // Religion Status
-        Logging.Debug.log("addPlayersPacket updated");
+        logger.debug("World: addPlayersPacket has been updated");
     }
 
     public void playerLoggedOut(Player player) {
         this.units.remove(player.getId());
         this.players.remove(player.getId());
         this.deletePlayersPacket.add(ServerCommands.PlayersListDelete).add(player.getId());
-        Logging.Debug.log(player + "\" just logged out.");
+        logger.debug("{} just logged out.", player);
     }
 
     public void playerUpdated(Player player) {
@@ -201,7 +205,7 @@ public class World implements Runnable {
 
             creature.spawn();
         }
-        Logging.Info.log("Creatures have been loaded. Count: " + this.units.size());
+        logger.info("Creatures have been created and spawned. Creatures count = {}", this.units.size());
     }
 
     public void unitCreated(Unit unit) {
@@ -264,9 +268,9 @@ public class World implements Runnable {
 
                 this.update(this.tickTime);
             } catch(InterruptedException ex) {
-                Logging.Error.log("A Thread error in World run ", ex);
+                logger.error("A Thread error in World run ", ex);
             } catch(Exception ex) {
-                Logging.Error.log("An error while updating server Tact " + this.tickTime, ex);
+                logger.error("An error while updating server Tact " + this.tickTime, ex);
             }
 
             // How much time takes the world update
@@ -275,7 +279,7 @@ public class World implements Runnable {
     }
 
     private void stop() {
-        Logging.Info.log("Stopping the World");
+        logger.info("Stopping the World");
         // Save of the players to DB
         this.players.values().forEach(Player::save);
     }
@@ -354,6 +358,6 @@ public class World implements Runnable {
 
         org.meds.net.Session.sendBuffers();
 
-        Logging.Debug.log("World update ends. Server Time: " + server.getUptimeMillis());
+        logger.debug("World update ends. New server Time: {}", server.getUptimeMillis());
     }
 }

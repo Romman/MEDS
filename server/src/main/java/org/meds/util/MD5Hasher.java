@@ -3,9 +3,12 @@ package org.meds.util;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import org.meds.logging.Logging;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class MD5Hasher {
+
+    private static Logger logger = LogManager.getLogger();
 
     public static String computeHash(String string) {
         StringBuilder sb = new StringBuilder();
@@ -16,8 +19,8 @@ public class MD5Hasher {
             for (byte b : digest) {
                 sb.append(String.format("%02x", b & 0xff));
             }
-        } catch(NoSuchAlgorithmException ex) {
-            Logging.Fatal.log("MD5Hasher throws NoSuchAlgorithmException: " + ex.getMessage());
+        } catch (NoSuchAlgorithmException ex) {
+            logger.fatal("Acquiring hashing algorithm has been failed.", ex);
             return null;
         }
 

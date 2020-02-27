@@ -1,8 +1,9 @@
 package org.meds.chat;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.Player;
 import org.meds.World;
-import org.meds.logging.Logging;
 import org.meds.net.ServerCommands;
 import org.meds.net.ServerPacket;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ChatHandler {
+
+    private static Logger logger = LogManager.getLogger();
 
     public final static String Separator = "\u0002";
     public final static String MessageSeparator = "\u0030";
@@ -56,8 +59,8 @@ public class ChatHandler {
 
         // Player is located nowhere
         if (player.getPosition() == null) {
-            Logging.Error.log(player + " says to chat" +
-                    ", but he is not on the map (no location specified)");
+            logger.warn("{} tries to speak in chat, but he is not on the map (no location specified). Skipped.",
+                    player);
             return;
         }
 

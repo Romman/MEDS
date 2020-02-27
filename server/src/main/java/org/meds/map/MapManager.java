@@ -1,12 +1,13 @@
 package org.meds.map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.Group;
 import org.meds.Player;
 import org.meds.Unit;
 import org.meds.data.dao.DAOFactory;
 import org.meds.data.dao.MapDAO;
 import org.meds.enums.MovementDirections;
-import org.meds.logging.Logging;
 import org.meds.net.ServerCommands;
 import org.meds.net.ServerPacket;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,8 @@ import java.util.List;
 
 @Component
 public class MapManager {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -72,7 +75,7 @@ public class MapManager {
         for (org.meds.data.domain.Kingdom entry : kingdomEntries) {
             this.kingdoms.put(entry.getId(), new Kingdom(entry));
         }
-        Logging.Info.log("Loaded " + this.kingdoms.size() + " kingdoms");
+        logger.info("Loaded {} kingdoms", this.kingdoms.size());
 
         List<org.meds.data.domain.Region> regionEntries = mapDAO.getRegions();
         for (org.meds.data.domain.Region entry : regionEntries) {
@@ -80,7 +83,7 @@ public class MapManager {
             this.regions.put(region.getId(), region);
             region.getKingdom().addRegion(region);
         }
-        Logging.Info.log("Loaded " + this.regions.size() + " regions");
+        logger.info("Loaded {} regions", this.regions.size());
 
         List<org.meds.data.domain.Location> locations = mapDAO.getLocations();
         for (org.meds.data.domain.Location entry : locations) {
@@ -88,7 +91,7 @@ public class MapManager {
             this.locations.put(entry.getId(), location);
             location.getRegion().addLocation(location);
         }
-        Logging.Info.log("Loaded " + this.locations.size() + " locations");
+        logger.info("Loaded {} locations", this.locations.size());
 
         // Filter duplicate values, that are the result of left outer join
         List<org.meds.data.domain.Shop> shops = mapDAO.getShops();
@@ -97,7 +100,7 @@ public class MapManager {
             shop.load();
             this.shops.put(entry.getId(), shop);
         }
-        Logging.Info.log("Loaded " + this.shops.size() + " shops");
+        logger.info("Loaded {} shops", this. shops.size());
     }
 
     public void addLocationUpdate(Location location) {
@@ -120,7 +123,7 @@ public class MapManager {
 
                 // Current position doesn't exist
                 if (mover.getPosition() == null) {
-                    Logging.Warn.log(mover + " tries to move but the current position is not set.");
+                    logger.warn("{} tries to move but the current position is NULL. Skipped", mover);
                     continue;
                 }
 

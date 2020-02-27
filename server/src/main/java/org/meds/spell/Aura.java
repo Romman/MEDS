@@ -3,13 +3,14 @@ package org.meds.spell;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.meds.Player;
-import org.meds.data.domain.*;
 import org.meds.data.domain.Spell;
 import org.meds.net.ServerCommands;
 import org.meds.net.ServerPacket;
 import org.meds.Unit;
-import org.meds.logging.Logging;
 
 public class Aura {
 
@@ -31,6 +32,8 @@ public class Aura {
          */
         Removed,
     }
+
+    private static Logger logger = LogManager.getLogger();
 
     private static final Map<Integer, Class<? extends Aura>> customAuraClasses = new HashMap<>();
 
@@ -72,7 +75,9 @@ public class Aura {
             try {
                 aura = auraClass.newInstance();
             } catch (InstantiationException | IllegalAccessException e) {
-                Logging.Error.log("Can not instantiate the Aura class " + auraClass.getName() + " for spell ID " + entry.getId() + " Error: " + e.getMessage());
+                logger.error(
+                        new ParameterizedMessage("Can not instantiate the Aura class {} for spell ID {}",
+                                auraClass.getName(), entry.getId()), e);
             }
         }
         // Generic (this) aura class

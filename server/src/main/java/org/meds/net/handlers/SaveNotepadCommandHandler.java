@@ -1,6 +1,7 @@
 package org.meds.net.handlers;
 
-import org.meds.logging.Logging;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.net.ClientCommandData;
 import org.meds.net.ClientCommandTypes;
 import org.meds.net.SessionContext;
@@ -13,6 +14,8 @@ import java.io.UnsupportedEncodingException;
  */
 @ClientCommand(ClientCommandTypes.SaveNotepad)
 public class SaveNotepadCommandHandler extends CommonClientCommandHandler {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private SessionContext sessionContext;
@@ -30,7 +33,7 @@ public class SaveNotepadCommandHandler extends CommonClientCommandHandler {
             String notes = java.net.URLDecoder.decode(data.getString(0), "Cp1251");
             sessionContext.getPlayer().setNotepadNotes(notes);
         } catch (UnsupportedEncodingException e) {
-            Logging.Error.log(sessionContext.getSession().toString() + " saving notepad: URLDecoder", e);
+            logger.error(sessionContext.getSession().toString() + " saving notepad: URLDecoder", e);
         }
     }
 }

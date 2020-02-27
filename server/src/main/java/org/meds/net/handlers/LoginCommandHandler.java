@@ -1,5 +1,7 @@
 package org.meds.net.handlers;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.Player;
 import org.meds.World;
 import org.meds.data.dao.DAOFactory;
@@ -8,7 +10,6 @@ import org.meds.data.domain.NewMessage;
 import org.meds.database.Repository;
 import org.meds.enums.BattleStates;
 import org.meds.enums.LoginResults;
-import org.meds.logging.Logging;
 import org.meds.net.*;
 import org.meds.util.MD5Hasher;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 @ClientCommand(ClientCommandTypes.Login)
 public class LoginCommandHandler implements ClientCommandHandler {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private DAOFactory daoFactory;
@@ -91,7 +94,7 @@ public class LoginCommandHandler implements ClientCommandHandler {
         } catch (Exception ex) {
             // Something happened and a player can not be created
             // Or setting last login data has failed
-            Logging.Error.log("Exception while authenticate a player.", ex);
+            logger.error("Exception while authenticate a player.", ex);
             packet.add(LoginResults.InnerServerError);
             session.send(packet);
             return;

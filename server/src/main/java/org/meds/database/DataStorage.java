@@ -1,10 +1,11 @@
 package org.meds.database;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.data.dao.DAOFactory;
 import org.meds.data.dao.WorldDAO;
 import org.meds.data.domain.*;
 import org.meds.database.repository.*;
-import org.meds.logging.Logging;
 import org.meds.net.ServerCommands;
 import org.meds.net.ServerPacket;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,8 @@ import java.util.Map;
 
 @Component
 public class DataStorage {
+
+    private static Logger logger = LogManager.getLogger();
 
     @Autowired
     private DAOFactory daoFactory;
@@ -55,39 +58,40 @@ public class DataStorage {
         List<Achievement> achievements = worldDAO.getAchievements();
         List<AchievementCriterion> criteria = worldDAO.getAchievementCriteria();
         this.achievementRepository.setData(achievements, criteria);
-        Logging.Info.log("Loaded " + achievements.size() + " achievements");
-        Logging.Info.log("Loaded " + criteria.size() + " achievement criteria");
+        logger.info("Loaded {} achievements", achievements.size());
+        logger.info("Loaded {} achievement criteria", criteria.size());
 
         // Creature Loot
         List<CreatureLoot> creatureLootItems = worldDAO.getCreatureLoot();
         creatureLootRepository.setData(creatureLootItems, CreatureLoot::getCreatureTemplateId, CreatureLoot::getItemTemplateId);
-        Logging.Info.log("Loaded %d creature loot (of %d creature templates)", creatureLootRepository.size(), creatureLootRepository.sizeFirst());
+        logger.info("Loaded {} entries of creature loot (out of {} creature templates)",
+                creatureLootRepository.size(), creatureLootRepository.sizeFirst());
 
         // Creature Quest Relations
         List<CreatureQuestRelation> relations = worldDAO.getCreatureQuestRelations();
         creatureQuestRelationRepository.setData(relations, CreatureQuestRelation::getCreatureTemplateId, CreatureQuestRelation::getQuestTemplateId);
-        Logging.Info.log("Loaded %d creature quest relations (of %d creature templates)",
+        logger.info("Loaded {} entries of creature quest relations (out of {} creature templates)",
                 creatureQuestRelationRepository.size(), creatureQuestRelationRepository.sizeFirst());
 
         // Creature Templates
         List<CreatureTemplate> creatureTemplates = worldDAO.getCreatureTemplates();
         creatureTemplateRepository.setData(creatureTemplates, CreatureTemplate::getTemplateId);
-        Logging.Info.log("Loaded " + creatureTemplateRepository.size() + " creature templates");
+        logger.info("Loaded {} creature templates", creatureTemplateRepository.size());
 
         // Currency
         List<Currency> currencies = worldDAO.getCurrencies();
         currencyRepository.setData(currencies, Currency::getId);
-        Logging.Info.log("Loaded " + currencies.size() + " currencies");
+        logger.info("Loaded {} currencies", currencies.size());
 
         // Guild
         List<Guild> guilds = worldDAO.getGuilds();
         guildRepository.setData(guilds, Guild::getId);
-        Logging.Info.log("Loaded %d guilds", guildRepository.size());
+        logger.info("Loaded {} guilds", guildRepository.size());
 
         // GuildLesson
         List<GuildLesson> guildLessons = worldDAO.getGuildLessons();
         guildLessonRepository.setData(guildLessons, GuildLesson::getGuildId, GuildLesson::getLevel);
-        Logging.Info.log("Loaded %d guild lessons (of %d guilds)",
+        logger.info("Loaded {} guild lessons (of {} guilds)",
                 guildLessonRepository.size(), guildLessonRepository.sizeFirst());
 
         // Cache GuildLessonInfo packets
@@ -96,27 +100,27 @@ public class DataStorage {
         // ItemTemplate
         List<ItemTemplate> items = worldDAO.getItemTemplates();
         itemTemplateRepository.setData(items, ItemTemplate::getId);
-        Logging.Info.log("Loaded " +itemTemplateRepository.size() + " items");
+        logger.info("Loaded {} items", itemTemplateRepository.size());
 
         // New Messages
         List<NewMessage> messages = worldDAO.getNewMessages();
         newMessageRepository.setData(messages, NewMessage::getId);
-        Logging.Info.log("Loaded " + newMessageRepository.size() + " new messages");
+        logger.info("Loaded {} new messages", newMessageRepository.size());
 
         // Quest Templates
         List<QuestTemplate> questTemplates = worldDAO.getQuestTemplates();
         questTemplateRepository.setData(questTemplates, QuestTemplate::getId);
-        Logging.Info.log("Loaded " + questTemplateRepository.size() + " quests");
+        logger.info("Loaded {} quests", questTemplateRepository.size());
 
         // Skills
         List<Skill> skills = worldDAO.getSkills();
         skillRepository.setData(skills, Skill::getId);
-        Logging.Info.log("Loaded " + skillRepository.size() + " skills");
+        logger.info("Loaded {} skills", skillRepository.size());
 
         // Spells
         List<Spell> spells = worldDAO.getSpells();
         spellRepository.setData(spells, Spell::getId);
-        Logging.Info.log("Loaded " + spellRepository.size() + " spells");
+        logger.info("Loaded {} spells", spellRepository.size());
     }
 
     // TODO: maybe put this method into a more appropriate class

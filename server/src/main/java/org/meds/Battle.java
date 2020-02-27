@@ -1,7 +1,8 @@
 package org.meds;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.meds.enums.BattleStates;
-import org.meds.logging.Logging;
 import org.meds.net.ServerCommands;
 import org.meds.net.ServerPacket;
 import org.meds.util.Random;
@@ -11,6 +12,8 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class Battle {
+
+    private static Logger logger = LogManager.getLogger();
 
     /**
      * A list of units who left this battle at the current battle update tick.
@@ -37,7 +40,7 @@ public class Battle {
             if (!this.participants.contains(unit)) {
                 this.participants.add(unit);
             }
-            Logging.Debug.log(unit + " has entered a battle.");
+            logger.debug("{} has enetered the battle {}", unit, this);
             sendBattleState(unit, BattleStates.EnterBattle);
             // This unit may be left already
             // but another participant has involved him again.
@@ -46,7 +49,7 @@ public class Battle {
     }
 
     public void leaveBattle(Unit unit) {
-        Logging.Debug.log(unit + " has left a battle.");
+        logger.debug("{} has left the battle {}", unit, this);
         sendBattleState(unit, BattleStates.NoBattle);
         // Add to the list of left units
         // These units will be remove from the battle after the next Battle.Update cycle.
@@ -91,7 +94,7 @@ public class Battle {
      * A battle is considered active unless it has no participants
      */
     public boolean isActive() {
-        return this.participants.isEmpty();
+        return !this.participants.isEmpty();
     }
 
     public void update(int time) {
