@@ -2,8 +2,13 @@ package org.meds.map;
 
 import org.meds.Player;
 import org.meds.Unit;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.Session;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.ChatMessage;
+import org.meds.net.message.server.PlayerLocationMessage;
+import org.meds.net.message.server.PlayersLocationMessage;
+import org.meds.net.message.server.QuestListRegionMessage;
+import org.meds.net.message.server.RegionLocationsMessage;
 import org.meds.util.Random;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -18,8 +23,10 @@ public class Region {
             Player player = (Player)event.getSource();
 
             // Send Region quests
-            if (player.getSession() != null)
-                player.getSession().send(newRegion.getQuestListData());
+            Session session = player.getSession();
+            if (session != null) {
+                session.send(newRegion.getQuestListData());
+            }
 
             // Region changed
             if (!newRegion.equals(Region.this)) {
@@ -28,25 +35,24 @@ public class Region {
                 newRegion.addPlayer(player);
 
                 // Send "Region arrival" and "Region left" messages
-                if (player.getSession() != null) {
-                    player.getSession().sendServerMessage(10, Region.this.getName());
+                if (session != null) {
+                    session.send(new ChatMessage(10, Region.this.getName()));
 
                     // Arrival message is not for a road
                     if (!newRegion.isRoad()) {
-                        ServerPacket arrivalMessage = new ServerPacket(ServerCommands.ServerMessage);
-                        arrivalMessage.add(11);
-                        arrivalMessage.add(newRegion.getName());
-                        arrivalMessage.add(newRegion.getMinLevel());
-                        arrivalMessage.add(newRegion.getMaxLevel());
-                        player.getSession().send(arrivalMessage);
+                        ChatMessage arrivalMessage = new ChatMessage(
+                                11,
+                                newRegion.getName(),
+                                newRegion.getMinLevel(),
+                                newRegion.getMaxLevel()
+                        );
+                        session.send(arrivalMessage);
                     }
                 }
 
             // Otherwise just notify everyone about location changed
             } else {
-                Region.this.send(new ServerPacket(ServerCommands.PlayerLocation)
-                        .add(player.getId())
-                        .add(event.getNewLocation().getId()));
+                Region.this.send(new PlayerLocationMessage(player.getId(), event.getNewLocation().getId()));
             }
         }
     }
@@ -70,7 +76,7 @@ public class Region {
      */
     private List<Location> ordinaryLocations;
 
-    private ServerPacket locationListData;
+    private ServerMessage locationsMessage;
 
     /**
      * Players that are located at the current location
@@ -140,9 +146,7 @@ public class Region {
         }
 
         // Notify the region about player entered
-        send(new ServerPacket(ServerCommands.PlayerLocation)
-                .add(player.getId())
-                .add(player.getPosition().getId()));
+        send(new PlayerLocationMessage(player.getId(), player.getPosition().getId()));
         player.addPositionChangedListener(this.positionChangedHandler);
     }
 
@@ -152,9 +156,7 @@ public class Region {
             return;
 
         // Notify the region about player left
-        send(new ServerPacket(ServerCommands.PlayerLocation)
-                .add(player.getId())
-                .add(0));
+        send(new PlayerLocationMessage(player.getId(), 0));
         player.removePositionChangedListener(this.positionChangedHandler);
     }
 
@@ -176,45 +178,42 @@ public class Region {
     /**
      * Sends the specified packet to all players in this region
      */
-    public void send(ServerPacket packet) {
+    public void send(ServerMessage message) {
         synchronized (this.players) {
             for (Player player : this.players) {
                 if (player.getSession() != null)
-                    player.getSession().send(packet);
+                    player.getSession().send(message);
             }
         }
     }
 
-    private ServerPacket getPlayersLocationData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.PlayersLocation);
+    private ServerMessage getPlayersLocationData() {
+        ServerMessage playersMessage;
         synchronized (this.players) {
-            packet.add(this.players.size());
+            List<PlayerLocationMessage> playersLocation = new ArrayList<>(this.players.size());
             for (Player player : this.players) {
-                packet.add(player.getId());
-                packet.add(player.getPosition().getId());
+                playersLocation.add(new PlayerLocationMessage(player.getId(), player.getPosition().getId()));
             }
+            playersMessage = new PlayersLocationMessage(playersLocation);
         }
-        return packet;
+        return playersMessage;
     }
 
-    public ServerPacket getLocationListData() {
-        if (this.locationListData == null) {
-            this.locationListData = new ServerPacket(ServerCommands.RegionLocations)
-                .add(this.entry.getId());
-            for (Location location : this.locations)
-                this.locationListData.add(location.getId());
+    public ServerMessage getLocationListData() {
+        if (this.locationsMessage == null) {
+            List<Integer> locationIds = new ArrayList<>(this.locations.size());
+            for (Location location : this.locations) {
+                locationIds.add(location.getId());
+            }
+            this.locationsMessage = new RegionLocationsMessage(this.entry.getId(), locationIds);
         }
 
-        return this.locationListData;
+        return this.locationsMessage;
     }
 
-    public ServerPacket getQuestListData() {
+    public ServerMessage getQuestListData() {
         // TODO: Implement Region quests
-        ServerPacket packet = new ServerPacket(ServerCommands.QuestListRegion);
-        packet.add(0); // Quest giver icon
-        packet.add(0); // Quest count
-
-        return packet;
+        return new QuestListRegionMessage();
     }
 
     @Override

@@ -1,6 +1,8 @@
 package org.meds.chat.commands;
 
 import org.meds.Player;
+import org.meds.net.Session;
+import org.meds.net.message.server.ChatMessage;
 import org.meds.server.Server;
 import org.meds.util.DateFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,13 +22,15 @@ public class InfoChatCommandHandler extends AbstractChatCommandHandler {
     @Override
     public void handle(Player player, String[] args) {
 
-        if (player.getSession() == null)
+        Session session = player.getSession();
+        if (session == null) {
             return;
+        }
 
-        player.getSession().sendServerMessage(1173, DateFormatter.format(new Date()))
-                .sendServerMessage(1174, server.getFormattedStartTime())
-                .sendServerMessage(1175, player.getSession().getLastLoginDate())
-                .sendServerMessage(1176, player.getSession().getLastLoginIp())
-                .sendServerMessage(1177, player.getSession().getCurrentIp());
+        session.send(new ChatMessage(1173, DateFormatter.format(new Date())));
+        session.send(new ChatMessage(1174, server.getFormattedStartTime()));
+        session.send(new ChatMessage(1175, session.getLastLoginDate()));
+        session.send(new ChatMessage(1176, session.getLastLoginIp()));
+        session.send(new ChatMessage(1177, session.getCurrentIp()));
     }
 }

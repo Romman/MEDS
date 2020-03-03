@@ -4,6 +4,7 @@ import org.meds.enums.PlayerSettings;
 import org.meds.net.ClientCommandData;
 import org.meds.net.ClientCommandTypes;
 import org.meds.net.SessionContext;
+import org.meds.net.message.server.ChatMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -25,10 +26,10 @@ public class SetAsceticismCommandHandler extends CommonClientCommandHandler {
         boolean set = data.getInt(0) == 1;
         if (set) {
             sessionContext.getPlayer().getSettings().set(PlayerSettings.Asceticism);
-            sessionContext.getSession().sendServerMessage(430);
+            sessionContext.getSession().send(new ChatMessage(430));
         } else {
             sessionContext.getPlayer().getSettings().unset(PlayerSettings.Asceticism);
-            sessionContext.getSession().sendServerMessage(431);
+            sessionContext.getSession().send(new ChatMessage(431));
         }
 
         sessionContext.getSession().send(sessionContext.getPlayer().getParametersData());

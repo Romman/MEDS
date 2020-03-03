@@ -2,6 +2,8 @@ package org.meds.net.handlers;
 
 import org.meds.World;
 import org.meds.net.*;
+import org.meds.net.message.ServerMessageIdentity;
+import org.meds.net.message.server.GroupCreatedMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -32,9 +34,7 @@ public class GroupJoinCommandHandler extends CommonClientCommandHandler {
         } else {
             leaderId = sessionContext.getPlayer().getGroup().getLeader().getId();
         }
-        ServerPacket groupCreatedPacket = new ServerPacket(ServerCommands.GroupCreated)
-                .add("0") // Not a leader
-                .add(leaderId);
-        sessionContext.getSession().send(groupCreatedPacket);
+
+        sessionContext.getSession().send(new GroupCreatedMessage(false, leaderId));
     }
 }

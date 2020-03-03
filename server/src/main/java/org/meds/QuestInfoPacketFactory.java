@@ -1,11 +1,13 @@
 package org.meds;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.meds.data.domain.CreatureTemplate;
 import org.meds.data.domain.ItemTemplate;
 import org.meds.data.domain.QuestTemplate;
 import org.meds.database.Repository;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.QuestInfoMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -22,68 +24,58 @@ public class QuestInfoPacketFactory {
     @Autowired
     private Locale locale;
 
-    public ServerPacket create(QuestTemplate template) {
+    public ServerMessage create(QuestTemplate template) {
         return create(template, false);
     }
 
-    public ServerPacket create(QuestTemplate template, boolean isForAccept) {
-        ServerPacket packet = new ServerPacket(isForAccept ? ServerCommands.QuestInfoForAccept : ServerCommands.QuestInfo);
-
-        packet.add(template.getId())
-                .add(template.getTitle())
-                .add(template.getType())
-                .add(template.getDescription())
-                .add(""); // Always empty
+    public ServerMessage create(QuestTemplate template, boolean isForAccept) {
+        int requiredCount = 0;
+        String requiredName = null;
 
         switch (template.getType()) {
             case Kill:
                 CreatureTemplate creatureTemplate = creatureTemplateRepository.get(template.getRequiredCreatureId());
-                if (creatureTemplate == null) {
-                    packet.add("").add("").add("");
-                } else {
-                    packet.add(template.getRequiredCount())
-                            .add(creatureTemplate.getName())
-                            .add("");
+                if (creatureTemplate != null) {
+                    requiredCount = template.getRequiredCount();
+                    requiredName = creatureTemplate.getName();
                 }
                 break;
             default:
-                packet.add("").add("").add("");
                 break;
         }
-        int rewardCount = 0;
+        List<String> rewards = new ArrayList<>(3);
 
         if (template.getRewardExp() != 0) {
-            packet.add(template.getRewardExp() + locale.getString(1));
-            ++rewardCount;
+            rewards.add(template.getRewardExp() + locale.getString(1));
         }
         if (template.getRewardGold() != 0) {
-            packet.add(template.getRewardGold() + locale.getString(2));
-            ++rewardCount;
+            rewards.add(template.getRewardGold() + locale.getString(2));
         }
 
         ItemTemplate itemTemplate;
         if (template.getRewardItem1Count() != 0 && template.getRewardItem1Id() != 0) {
             itemTemplate = itemTemplateRepository.get(template.getRewardItem1Id());
             if (itemTemplate != null) {
-                packet.add(template.getRewardItem1Count() + " x " + itemTemplate.getTitle());
-                ++rewardCount;
+                rewards.add(template.getRewardItem1Count() + " x " + itemTemplate.getTitle());
             }
         }
         if (template.getRewardItem2Count() != 0 && template.getRewardItem2Id() != 0) {
             itemTemplate = itemTemplateRepository.get(template.getRewardItem2Id());
             if (itemTemplate != null) {
-                packet.add(template.getRewardItem2Count() + " x " + itemTemplate.getTitle());
-                ++rewardCount;
+                rewards.add(template.getRewardItem2Count() + " x " + itemTemplate.getTitle());
             }
         }
 
-        while (rewardCount != 3) {
-            packet.add("");
-            ++rewardCount;
-        }
-
-        packet.add(0); // ??? Tutorial?
-
-        return packet;
+        return new QuestInfoMessage(
+                isForAccept,
+                template.getId(),
+                template.getTitle(),
+                template.getType(),
+                template.getDescription(),
+                requiredCount,
+                requiredName,
+                rewards
+        );
     }
+
 }

@@ -1,5 +1,7 @@
 package org.meds.net.handlers;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.meds.Player;
@@ -10,7 +12,23 @@ import org.meds.data.domain.NewMessage;
 import org.meds.database.Repository;
 import org.meds.enums.BattleStates;
 import org.meds.enums.LoginResults;
+import org.meds.enums.Parameters;
 import org.meds.net.*;
+import org.meds.net.message.MessageIdentity;
+import org.meds.net.message.MessageWriteStream;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.ServerMessageIdentity;
+import org.meds.net.message.server.AutoSpellMessage;
+import org.meds.net.message.server.BattleMessage;
+import org.meds.net.message.server.BonusMagicParameterMessage;
+import org.meds.net.message.server.ChatMessage;
+import org.meds.net.message.server.ClansMessage;
+import org.meds.net.message.server.LoginResultMessage;
+import org.meds.net.message.server.MessageListMessage;
+import org.meds.net.message.server.RelaxOffMessage;
+import org.meds.net.message.server.RelaxOnMessage;
+import org.meds.net.message.server._csMessage;
+import org.meds.net.message.server._lh0Message;
 import org.meds.util.MD5Hasher;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -60,16 +78,14 @@ public class LoginCommandHandler implements ClientCommandHandler {
          * 4) location data: tl, loc, li, pss etc.
          */
 
-        // Response packet starts with login_result
-        ServerPacket packet = new ServerPacket(ServerCommands.LoginResult);
+
         String playerLogin = data.getString(0).toLowerCase();
         Character character = daoFactory.getCharacterDAO().findCharacter(playerLogin);
 
         // Player is not found
         // Sending "Wrong login or password" result
         if (character == null) {
-            packet.add(LoginResults.WrongLoginOrPassword);
-            session.send(packet);
+            session.send(new LoginResultMessage(LoginResults.WrongLoginOrPassword));
             return;
         }
 
@@ -79,24 +95,24 @@ public class LoginCommandHandler implements ClientCommandHandler {
 
         // Hash does not match
         if (!receivedPasswordHash.equalsIgnoreCase(actualPassKeyHash)) {
-            packet.add(LoginResults.WrongLoginOrPassword);
-            session.send(packet);
+            session.send(new LoginResultMessage(LoginResults.WrongLoginOrPassword));
             return;
         }
 
         // Create a Player instance with found id
         // Something happened and a player can not be created
 
-
+        List<ServerMessage> messages;
         try {
             session.authenticate(character);
-            packet.add(LoginResults.OK);
+            // Response packet starts with "login_result"
+            messages = new ArrayList<>(20);
+            messages.add(new LoginResultMessage(LoginResults.OK));
         } catch (Exception ex) {
             // Something happened and a player can not be created
             // Or setting last login data has failed
             logger.error("Exception while authenticate a player.", ex);
-            packet.add(LoginResults.InnerServerError);
-            session.send(packet);
+            session.send(new LoginResultMessage(LoginResults.InnerServerError));
             return;
         }
 
@@ -104,126 +120,137 @@ public class LoginCommandHandler implements ClientCommandHandler {
 
         // Add New Messages
         if (newMessageRepository.size() != 0) {
-            packet.add(ServerCommands.MessageList);
+            List<MessageListMessage.MessageInfo> messageInfos = new ArrayList<>(newMessageRepository.size());
             for (NewMessage message : newMessageRepository) {
-                packet.add(message.getId()).add(message.getTypeId()).add(message.getMessage());
+                messageInfos.add(new MessageListMessage.MessageInfo(
+                        message.getId(), message.getTypeId(), message.getMessage())
+                );
             }
+            messages.add(new MessageListMessage(messageInfos));
         }
 
-        // Unknown "cs" values
-        packet.addData(ServerCommands._cs, "44", "0").addData(ServerCommands._cs, "45", "0").addData(ServerCommands._cs, "46", "0")
-                .addData(ServerCommands._cs, "47", "0").addData(ServerCommands._cs, "48", "0").addData(ServerCommands._cs, "49", "0");
+        // Send "cs" values
+        messages.add(new _csMessage(44, 0));
+        messages.add(new _csMessage(45, 0));
+        messages.add(new _csMessage(46, 0));
+        messages.add(new _csMessage(47, 0));
+        messages.add(new _csMessage(48, 0));
+        messages.add(new _csMessage(49, 0));
 
-        packet.addData(ServerCommands.ClanInfo, "1", "1", "0", "Clan Name")
-                .add(player.getMagicData())
-                .add(player.getSkillData())
-                .add(player.getGuildData());
+        messages.add(new ClansMessage(1, 0, "Dummy Clan Name"));
+        messages.add(player.getMagicData());
+        messages.add(player.getSkillData());
+        messages.add(player.getGuildData());
 
         // NOTE: Sometimes the data above is sent as a separate packet
 
-        packet.add(player.getCurrencyData())
-                .add(player.getParametersData())
-                .addData(ServerCommands.BattleState, BattleStates.NoBattle.toString())
-                .add(player.getHealthManaData())
-                .add(player.getLevelData());
+        messages.add(player.getCurrencyData());
+        messages.add(player.getCurrencyData());
+        messages.add(player.getParametersData());
+        messages.add(new BattleMessage(BattleStates.NoBattle));
+        messages.add(player.getHealthManaData());
+        messages.add(player.getLevelData());
 
-        session.send(packet);
-        packet.clear();
+        session.send(messages);
+        messages = new ArrayList<>(20);
 
         /*
          * No sharp data since 1.2.7.6
-        // sharp "#"
-        packet.send(ServerCommands.Sharp, "0", "0");
-         * */
-
-        /*
-         * Do not remember what is this
-        // msg
-        String[] msg = new String[] { "msg", "\u00024" };
+         * sharp "#"
+         *
+         * Message:
+         * # 0 0
          * */
 
         // Empty Item info
-        packet.addData(ServerCommands.ItemInfo, "");
+        // TODO: Do we need it? Trace the absence of this message as how the client works
+        // ServerMessageIdentity.ItemInfo and empty string ""
 
-        packet.add(player.getInventory().getEquipmentData());
+        messages.add(player.getInventory().getEquipmentData());
 
         // Again?? Why???
-        packet.add(player.getParametersData());
+        // Trace the absence of this message and client reaction to that
+        messages.add(player.getParametersData());
 
         // BonusMagicParameters? Why?
-        packet.addData(ServerCommands.BonusMagicParameter, "10", "0")
-                .addData(ServerCommands.BonusMagicParameter, "15", "0")
-                .addData(ServerCommands.BonusMagicParameter, "16", "0")
-                .addData(ServerCommands.BonusMagicParameter, "17", "0");
+        messages.add(new BonusMagicParameterMessage(Parameters.parse(10), 0));
+        messages.add(new BonusMagicParameterMessage(Parameters.parse(15), 0));
+        messages.add(new BonusMagicParameterMessage(Parameters.parse(16), 0));
+        messages.add(new BonusMagicParameterMessage(Parameters.parse(17), 0));
 
         // TODO: add cm data here (current available magic spells)
 
-        packet.add(player.getInventory().getInventoryData());
+        messages.add(player.getInventory().getInventoryData());
 
         // Unknown Datas
-        packet.addData(ServerCommands._wg, "84", "147"); // Weight
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._wg, "84", "147")); // Weight
         // Possibly extended inventory price data
-        packet.addData(ServerCommands._invt, "0", "5 платины");
-        packet.addData(ServerCommands.AutoSpell, Integer.toString(player.getAutoSpell())); // Default magic
-        packet.addData(ServerCommands._s0, "");
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._invt, "0", "5 platinum"));
 
-        if (player.isRelax())
-            packet.add(ServerCommands.RelaxOn);
-        else
-            packet.add(ServerCommands.RelaxOff);
+        messages.add(new AutoSpellMessage(player.getAutoSpell())); // Default magic
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._s0, ""));
 
-        packet.addData(ServerCommands._lh0, "");
+        if (player.isRelax()) {
+            messages.add(new RelaxOnMessage());
+        } else {
+            messages.add(new RelaxOffMessage());
+        }
+
+        messages.add(new _lh0Message());
 
         // TODO: add auras
         // TODO: add quest statuses
 
         // NOTE: Sometimes the data above is sent as a separate packet
 
-        packet.add(player.getAchievementData());
+        messages.add(player.getAchievementData());
 
         // prot1 and prot2
-        packet.addData(ServerCommands._prot1, "0").addData(ServerCommands._prot2, "0");
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._prot1, "0"));
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._prot2, "0"));
 
         // Last corpse location (Skull icon at the cell with this location)
-        packet.addData(ServerCommands._tc, "1997");
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._tc, "1997"));
 
         // Unknown
-        packet.addData(ServerCommands._hs, "0");
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._hs, "0"));
 
         // TODO: implement Professions
-        packet.add(player.getProfessionData());
+        messages.add(player.getProfessionData());
 
         // Unknown
-        packet.addData(ServerCommands._omg, "7", "0", "0");
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._hs, "7", "0", "0"));
 
         // Notepad notes
-        packet.addData(ServerCommands.Notepad, player.getNotepadNotes());
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity.Notepad, player.getNotepadNotes()));
 
-        packet.add(world.getDayTimeData());
+        messages.add(world.getDayTimeData());
 
         // "omg" again but different numbers
-        packet.addData(ServerCommands._omg, "9", "1", "0");
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._hs,  "9", "1", "0"));
 
         // Possibly sleep mode
-        packet.addData(ServerCommands._zzz, "0");
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._zzz,  "0"));
 
         // Unknown
-        packet.addData(ServerCommands._fpi, "0");
-        packet.addData(ServerCommands._swf, "0");
-        packet.addData(ServerCommands._fex, "0", "0");
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._fpi,  "0"));
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._swf,  "0"));
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._fex,  "0", "0"));
 
         // "wg" ??? Again???
-        packet.addData(ServerCommands._wg, "84", "147");
+        messages.add(new UnclassifiedMessage(ServerMessageIdentity._wg,  "84", "147"));
 
-        packet.add(player.getPosition().getData());
-        packet.add(player.getPosition().getCorpseData());
+        messages.add(player.getPosition().getData());
+        messages.add(player.getPosition().getCorpseData());
         // TODO: Send the neighbour locations info here
 
         // Unknown
-        // But here is my email and link to the official webshop page
-        packet.addData(ServerCommands._hoi, "http://ds-dealer.ru/dsrus/index.php?u=", "email@email.com", "0");
+        // Here are the player's email address and the link to their official webshop page
+        messages.add(new UnclassifiedMessage(
+                ServerMessageIdentity._hoi,  "http://ds-dealer.ru/dsrus/index.php?u=", "email@email.com", "0")
+        );
 
-        packet.add(world.getOnlineData());
+        messages.add(world.getOnlineData());
 
             /*
             // Mentor
@@ -231,8 +258,35 @@ public class LoginCommandHandler implements ClientCommandHandler {
              * */
 
         // Send the custom welcome message
-        packet.addData(ServerCommands.ServerMessage, "5001");
+        messages.add(new ChatMessage(5001));
 
-        session.send(packet);
+        session.send(messages);
+    }
+
+    /**
+     * Temporary implementation.
+     * Should be removed when all messages types will be researched and classified.
+     */
+    private static class UnclassifiedMessage implements ServerMessage {
+
+        final ServerMessageIdentity identity;
+        final String[] params;
+
+        public UnclassifiedMessage(ServerMessageIdentity identity, String... params) {
+            this.identity = identity;
+            this.params = params;
+        }
+
+        @Override
+        public MessageIdentity getIdentity() {
+            return this.identity;
+        }
+
+        @Override
+        public void serialize(MessageWriteStream stream) {
+            for (String param : params) {
+                stream.writeString(param);
+            }
+        }
     }
 }

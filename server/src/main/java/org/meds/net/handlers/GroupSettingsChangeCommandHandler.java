@@ -44,6 +44,7 @@ public class GroupSettingsChangeCommandHandler extends CommonClientCommandHandle
         group.setClanAccessMode(mode);
         group.setOpen(data.getInt(8, 1) != 0);
 
-       sessionContext.getSession().send(group.getSettingsData()).send(group.getTeamLootData());
+        sessionContext.getSession().send(group.getSettingsData());
+        sessionContext.getSession().send(group.getTeamLootData());
     }
 }

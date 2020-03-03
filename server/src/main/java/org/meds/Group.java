@@ -1,7 +1,13 @@
 package org.meds;
 
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import java.util.Arrays;
+import java.util.List;
+import org.meds.net.Session;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.ChatMessage;
+import org.meds.net.message.server.GroupCreatedMessage;
+import org.meds.net.message.server.GroupLootMessage;
+import org.meds.net.message.server.GroupSettingsMessage;
 import org.meds.util.ReadOnlyIterator;
 import org.meds.util.Valued;
 
@@ -164,20 +170,17 @@ public class Group implements Iterable<Player> {
 
         // Message to everyone about leader exchange
         // And current group relation
-        ServerPacket message = new ServerPacket(ServerCommands.ServerMessage).add(279).add(member.getName());
-        ServerPacket packet;
+        ServerMessage updateLeaderMessage = new ChatMessage(279, member.getName());
         for (Player groupMember : this) {
             if (groupMember.getSession() == null)
                 continue;
-            packet = new ServerPacket(
-                    ServerCommands.GroupCreated)
-                    .add(groupMember == this.leader ? "1" : "0")
-                    .add(this.leader.getId());
+            groupMember.getSession().send(updateLeaderMessage);
+            groupMember.getSession().send(new GroupCreatedMessage(
+                    groupMember == this.leader, this.leader.getId()));
             // Send group settings to the new leader
             if (groupMember == this.leader) {
-                packet.add(this.getSettingsData());
+                groupMember.getSession().send(this.getSettingsData());
             }
-            groupMember.getSession().send(message).send(packet);
         }
     }
 
@@ -324,10 +327,10 @@ public class Group implements Iterable<Player> {
         }
 
         // Notify the other members
-        ServerPacket packet = new ServerPacket(ServerCommands.ServerMessage).add(268).add(newMember.getName());
+        ServerMessage newMemberMessage = new ChatMessage(268, newMember.getName());
         for (Player member : this) {
             if (member.getSession() != null) {
-                member.getSession().send(packet);
+                member.getSession().send(newMemberMessage);
             }
         }
 
@@ -344,26 +347,21 @@ public class Group implements Iterable<Player> {
             return false;
 
         // Send to the left member
-        if (member.getSession() != null) {
+        Session memberSession = member.getSession();
+        if (memberSession != null) {
             // You left the group
-            ServerPacket packet = new ServerPacket(ServerCommands.ServerMessage)
-                    .add(1028)
-                    // No group relation now
-                    .add(ServerCommands.GroupCreated)
-                    .add(0)
-                    .add(0);
-            member.getSession().send(packet);
+            memberSession.send(new ChatMessage(1028));
+            // No group relation now
+            memberSession.send(new GroupCreatedMessage());
         }
 
         // Send to remaining members
-        ServerPacket packet = new ServerPacket(ServerCommands.ServerMessage)
-                .add(269)
-                .add(member.getName());
-        // TODO: ServerCommands.GroupCreated is sent as well
+        ServerMessage message = new ChatMessage(269, member.getName());
+        // TODO: {@link ServerMessageIdentity.GroupCreated} is sent as well
         // when the player leaves by its own only (not kicked)
         for (Player groupMember : this) {
             if (groupMember.getSession() != null) {
-                groupMember.getSession().send(packet);
+                groupMember.getSession().send(message);
             }
         }
 
@@ -373,36 +371,31 @@ public class Group implements Iterable<Player> {
     public void disband() {
         this.disbanded = true;
 
-        ServerPacket packet = new ServerPacket(ServerCommands.ServerMessage).add(280);
-        packet.add(ServerCommands.GroupCreated).add("0").add("0");
+        List<ServerMessage> messages = Arrays.asList(new ChatMessage(280), new GroupCreatedMessage());
         for (Player member : this) {
             member.leaveGroup();
             if (member.getSession() != null) {
-                member.getSession().send(packet);
+                member.getSession().send(messages);
             }
         }
     }
 
-    public ServerPacket getSettingsData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.GroupSettings);
-        packet.add(this.leader.getId())
-                .add(this.minLevel)
-                .add(this.maxLevel)
-                .add(this.noReligionAllowed ? "1" : "0")
-                .add(this.sunAllowed ? "1" : "0")
-                .add(this.moonAllowed ? "1" : "0")
-                .add(this.orderAllowed ? "1" : "0")
-                .add(this.chaosAllowed ? "1" : "0")
-                .add(this.clanAccessMode)
-                .add(this.open ? "1" : "0");
-
-        return packet;
+    public ServerMessage getSettingsData() {
+        return new GroupSettingsMessage(
+                this.leader.getId(),
+                this.minLevel,
+                this.maxLevel,
+                this.noReligionAllowed,
+                this.sunAllowed,
+                this.moonAllowed,
+                this.orderAllowed,
+                this.chaosAllowed,
+                this.clanAccessMode,
+                this.open);
     }
 
-    public ServerPacket getTeamLootData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.TeamLoot);
-        packet.add(this.teamLootMode);
-        return packet;
+    public ServerMessage getTeamLootData() {
+        return new GroupLootMessage(this.teamLootMode);
     }
 
     @Override

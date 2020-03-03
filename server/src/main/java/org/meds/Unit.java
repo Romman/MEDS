@@ -7,9 +7,8 @@ import org.meds.database.repository.SpellRepository;
 import org.meds.enums.*;
 import org.meds.map.Location;
 import org.meds.map.MapManager;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
 import org.meds.net.Session;
+import org.meds.net.message.server.ChatMessage;
 import org.meds.spell.Aura;
 import org.meds.spell.Aura.States;
 import org.meds.spell.SpellFactory;
@@ -376,13 +375,6 @@ public abstract class Unit {
         return this.battle == null;
     }
 
-    public ServerPacket getHealthManaData() {
-        return new ServerPacket(ServerCommands.Health)
-        .add(this.health)
-        .add(this.mana)
-        .add("0");
-    }
-
     public void runAway() {
         if (this.battle == null) {
             return;
@@ -391,7 +383,7 @@ public abstract class Unit {
         // Send message "You panic and try to run away"
         Session session;
         if (this.isPlayer() && (session = ((Player)this).getSession()) != null) {
-            session.sendServerMessage(254);
+            session.send(new ChatMessage(254));
         }
         this.battle.runAway(this);
     }
@@ -473,7 +465,8 @@ public abstract class Unit {
                 this.addServerMessage(damage.MessageDealerMiss, victim.getName());
                 victim.addServerMessage(damage.MessageVictimMiss, getName());
 
-                this.position.send(this, victim, new ServerPacket(ServerCommands.ServerMessage).add(damage.MessagePositionMiss).add(this.getName()).add(victim.getName()));
+                this.position.send(this, victim,
+                        new ChatMessage(damage.MessagePositionMiss, this.getName(), victim.getName()));
 
                 return;
             }
@@ -489,7 +482,8 @@ public abstract class Unit {
             addServerMessage(damage.MessageDealerNoDamage, victim.getName());
             victim.addServerMessage(damage.MessageVictimNoDamage, getName());
 
-            this.position.send(this, victim, new ServerPacket(ServerCommands.ServerMessage).add(damage.MessagePositionNoDamage).add(this.getName()).add(victim.getName()));
+            this.position.send(this, victim,
+                    new ChatMessage(damage.MessagePositionNoDamage, this.getName(), victim.getName()));
 
             return;
         }
@@ -500,7 +494,8 @@ public abstract class Unit {
             addServerMessage(damage.MessageDealerKillingBlow, Integer.toString(damage.FinalDamage), victim.getName());
             victim.addServerMessage(damage.MessageVictimKillingBlow, this.getName(), Integer.toString(damage.FinalDamage));
 
-            this.position.send(this, victim, new ServerPacket(ServerCommands.ServerMessage).add(damage.MessagePositionKillingBlow).add(this.getName()).add(damage.FinalDamage).add(victim.getName()));
+            this.position.send(this, victim,
+                    new ChatMessage(damage.MessagePositionKillingBlow, this.getName(), damage.FinalDamage, victim.getName()));
 
             Corpse corpse = victim.die();
 
@@ -528,7 +523,8 @@ public abstract class Unit {
 
             addServerMessage(damage.MessageDealerDamage, victim.getName(), Integer.toString(damage.FinalDamage));
             victim.addServerMessage(damage.MessageVictimDamage, getName(), Integer.toString(damage.FinalDamage));
-            this.position.send(this, victim, new ServerPacket(ServerCommands.ServerMessage).add(damage.MessagePositionDamage).add(this.getName()).add(victim.getName()).add(damage.FinalDamage));
+            this.position.send(this, victim,
+                    new ChatMessage(damage.MessagePositionDamage, this.getName(), victim.getName(), damage.FinalDamage));
         }
     }
 
@@ -573,7 +569,7 @@ public abstract class Unit {
             // Current level is higher then the new level => Send 'no effect' message
             } else if (currentAura.getLevel() > aura.getLevel()) {
                 if (this.isPlayer() && ((Player)this).getSession() != null)
-                    ((Player)this).getSession().sendServerMessage(301);
+                    ((Player)this).getSession().send(new ChatMessage(301));
                 return false;
             // Otherwise, just update the aur
             } else {
@@ -586,7 +582,7 @@ public abstract class Unit {
 
         // Send aura data;
         if (this.isPlayer() && ((Player)this).getSession() != null)
-            ((Player)this).getSession().send(aura.getPacketData());
+            ((Player)this).getSession().send(aura.getBonusMessages());
         return true;
     }
 

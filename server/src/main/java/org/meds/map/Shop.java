@@ -1,14 +1,16 @@
 package org.meds.map;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.meds.Player;
+import org.meds.net.message.server.ShopInfoMessage;
 import org.meds.data.domain.ItemTemplate;
 import org.meds.data.domain.ShopItem;
 import org.meds.database.Repository;
 import org.meds.item.*;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -51,27 +53,21 @@ public class Shop {
         return null;
     }
 
-    public ServerPacket getData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.ShopInfo);
-        packet.add(this.items.size());
-        packet.add(this.entry.getType());
-        packet.add(0);
+    public ServerMessage getData() {
+        List<ShopInfoMessage.ShopItemInfo> itemInfos = new ArrayList<>(this.items.size());
         for (Map.Entry<ItemTemplate, Integer> entry : this.items.entrySet()) {
-            packet.add(entry.getKey().getId())
-                .add("0") // Modification (Standard shops have only default items
-                .add(ItemUtils.getMaxDurability(entry.getKey()));
-            // -1 in DB mean an infinite count
-            // But for the client this number is 999,999
-            if (entry.getValue() == -1) {
-                packet.add("999999");
-            } else {
-                packet.add(entry.getValue());
-            }
-            packet.add(entry.getKey().getCost());
-            packet.add(0);
+            itemInfos.add(new ShopInfoMessage.ShopItemInfo(
+                    entry.getKey().getId(),
+                    0, // Standard shops have only default items
+                    ItemUtils.getMaxDurability(entry.getKey()),
+                    // -1 in DB mean an infinite count
+                    // But for the client this number is 999,999
+                    entry.getValue() == -1 ? 999_999 : entry.getValue(),
+                    entry.getKey().getCost()
+            ));
         }
 
-        return packet;
+        return new ShopInfoMessage(this.entry.getType(), itemInfos);
     }
 
     /**

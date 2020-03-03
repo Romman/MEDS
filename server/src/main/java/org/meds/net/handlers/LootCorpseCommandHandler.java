@@ -6,6 +6,9 @@ import org.meds.item.Item;
 import org.meds.item.ItemPrototype;
 import org.meds.item.ItemTitleConstructor;
 import org.meds.net.*;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.ChatMessage;
+import org.meds.net.message.server.GetCorpseMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -32,7 +35,7 @@ public class LootCorpseCommandHandler extends CommonClientCommandHandler {
         int itemDurability = data.getInt(2);
 
         // Do not know why but always true
-        context.getSession().send(new ServerPacket(ServerCommands.GetCorpse).add("true"));
+        context.getSession().send(new GetCorpseMessage());
         Player player = context.getPlayer();
 
         // TODO: sound 26 on gold collect. Sound 27 on item collect
@@ -56,18 +59,18 @@ public class LootCorpseCommandHandler extends CommonClientCommandHandler {
             int itemCount = item.getCount();
             String itemTitle = itemTitleConstructor.getTitle(item);
             if (player.getInventory().tryStoreItem(item)) {
-                context.getSession().sendServerMessage(1014, itemCount > 1 ? itemCount + " " : "", itemTitle);
+                context.getSession().send(new ChatMessage(1014, itemCount > 1 ? itemCount + " " : "", itemTitle));
 
-                ServerPacket pickUpMessage = new ServerPacket(ServerCommands.ServerMessage)
-                        .add("1026").add(player.getName())
-                        .add(itemCount > 1 ? itemCount + " " : "")
-                        .add(itemTitle);
+                ServerMessage pickUpMessage = new ChatMessage(1026,
+                        player.getName(),
+                        itemCount > 1 ? itemCount + " " : "",
+                        itemTitle);
                 player.getPosition().send(player, pickUpMessage);
                 if (item.getCount() == 0) {
                     player.getPosition().removeItem(item);
                 }
             } else {
-                context.getSession().sendServerMessage(1001, itemTitle);
+                context.getSession().send(new ChatMessage(1001, itemTitle));
             }
         }
     }

@@ -3,8 +3,8 @@ package org.meds.net.handlers;
 import org.meds.database.DataStorage;
 import org.meds.net.ClientCommandData;
 import org.meds.net.ClientCommandTypes;
-import org.meds.net.ServerPacket;
 import org.meds.net.SessionContext;
+import org.meds.net.message.ServerMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -25,9 +25,9 @@ public class GuildLessonsInfoCommandHandler extends CommonClientCommandHandler {
 
     @Override
     public void handle(ClientCommandData data) {
-        ServerPacket lessonData = dataStorage.getGuildLessonInfo(data.getInt(0, -1));
-        if (lessonData != null) {
-            sessionContext.getSession().send(lessonData);
+        ServerMessage lessonMessage = dataStorage.getGuildLessonInfo(data.getInt(0, -1));
+        if (lessonMessage != null) {
+            sessionContext.getSession().send(lessonMessage);
         }
     }
 }

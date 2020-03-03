@@ -8,8 +8,11 @@ import org.meds.database.Repository;
 import org.meds.enums.Currencies;
 import org.meds.enums.QuestStatuses;
 import org.meds.enums.QuestTypes;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.ChatMessage;
+import org.meds.net.message.server.QuestFinalTextMessage;
+import org.meds.net.message.server.QuestListInfoMessage;
+import org.meds.net.message.server.QuestUpdateMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
@@ -33,7 +36,9 @@ public class Quest {
 
             if (quest.player.getSession() != null) {
                 quest.player.getSession().send(quest.getUpdateQuestData());
-                quest.player.getSession().send(new ServerPacket(ServerCommands.ServerMessage).add(337).add(quest.questTemplate.getTitle()).add(quest.getProgress()).add(quest.questTemplate.getRequiredCount()));
+                quest.player.getSession().send(new ChatMessage(
+                        337, quest.questTemplate.getTitle(), quest.getProgress(), quest.questTemplate.getRequiredCount()
+                ));
             }
 
             if (quest.getProgress() == quest.questTemplate.getRequiredCount()) {
@@ -126,31 +131,29 @@ public class Quest {
     }
 
 
-    public ServerPacket getQuestData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.QuestListInfo);
-        packet.add(this.questTemplate.getId())
-                .add(this.questTemplate.getType())
-                .add(this.questTemplate.getTitle())
-                .add(this.getProgress())
-                .add(this.questTemplate.getRequiredCount())
-                .add(this.questTemplate.getTime() == 0 ? "" : this.getTimer())
-                .add(this.characterQuest.getStatusInteger())
-                .add(this.isTracked() ? "1" : "0")
-                .add(this.questTemplate.getTracking());
-
-        return packet;
+    public ServerMessage getQuestData() {
+        return new QuestListInfoMessage(
+                this.questTemplate.getId(),
+                this.questTemplate.getType(),
+                this.questTemplate.getTitle(),
+                this.getProgress(),
+                this.questTemplate.getRequiredCount(),
+                this.questTemplate.getTime(),
+                this.characterQuest.getStatusInteger(),
+                this.isTracked(),
+                this.questTemplate.getTracking()
+        );
     }
 
-    public ServerPacket getUpdateQuestData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.UpdateQuest);
-        packet.add(this.questTemplate.getId())
-                .add(this.getProgress())
-                .add(this.questTemplate.getTime() == 0 ? "" : this.getTimer())
-                .add(this.getStatus())
-                .add(this.isTracked() ? "1" : "0")
-                .add(this.questTemplate.getTracking());
-
-        return packet;
+    public ServerMessage getUpdateQuestData() {
+        return new QuestUpdateMessage(
+                this.questTemplate.getId(),
+                this.getProgress(),
+                this.questTemplate.getTime(),
+                this.characterQuest.getStatusInteger(),
+                this.isTracked(),
+                this.questTemplate.getTracking()
+        );
     }
 
     public void accept() {
@@ -170,7 +173,9 @@ public class Quest {
     public void complete() {
         // Send Final Text
         if (this.player.getSession() != null) {
-            this.player.getSession().send(new ServerPacket(ServerCommands.QuestFinalText).add(this.questTemplate.getTitle()).add(this.questTemplate.getEndText()));
+            this.player.getSession().send(new QuestFinalTextMessage(
+                    this.questTemplate.getTitle(), this.questTemplate.getEndText()
+            ));
         }
 
         // Change quest status
@@ -183,11 +188,11 @@ public class Quest {
         // Reward
         if (this.questTemplate.getRewardGold() != 0) {
             if (this.player.getSession() != null) {
-                ServerPacket packet = new ServerPacket(ServerCommands.ServerMessage)
-                        .add(1096)
-                        .add(this.questTemplate.getRewardGold())
-                        .add(currencyRepository.get(Currencies.Gold.getValue()).getTitle());
-                this.player.getSession().send(packet);
+                ChatMessage rewardMessage = new ChatMessage(1096,
+                        this.questTemplate.getRewardGold(),
+                        currencyRepository.get(Currencies.Gold.getValue()).getTitle()
+                );
+                this.player.getSession().send(rewardMessage);
             }
             this.player.changeCurrency(Currencies.Gold, this.questTemplate.getRewardGold());
         }

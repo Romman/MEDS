@@ -11,8 +11,24 @@ import org.meds.enums.*;
 import org.meds.item.Item;
 import org.meds.item.ItemTitleConstructor;
 import org.meds.map.Location;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.AchievementsMessage;
+import org.meds.net.message.server.AutoSpellMessage;
+import org.meds.net.message.server.ChatMessage;
+import org.meds.net.message.server.CurrenciesMessage;
+import org.meds.net.message.server.CurrencyUpdateMessage;
+import org.meds.net.message.server.ExperienceMessage;
+import org.meds.net.message.server.GroupCreatedMessage;
+import org.meds.net.message.server.GuildInfoMessage;
+import org.meds.net.message.server.GuildLevelsMessage;
+import org.meds.net.message.server.HealthMessage;
+import org.meds.net.message.server.MagicInfoMessage;
+import org.meds.net.message.server.NoGoMessage;
+import org.meds.net.message.server.NpcQuestsMessage;
+import org.meds.net.message.server.PlayerInfoMessage;
+import org.meds.net.message.server.ProfessionsMessage;
+import org.meds.net.message.server.SkillInfoMessage;
+import org.meds.net.message.server._lh0Message;
 import org.meds.player.LevelCost;
 import org.meds.profession.Profession;
 import org.meds.spell.Aura;
@@ -61,7 +77,8 @@ public class Player extends Unit {
 
                     if (exp > 0) {
                         Player.this.addExp(exp);
-                        Player.this.getSession().sendServerMessage(1038, Integer.toString(exp)); // You gain experience
+                        // You gain experience
+                        Player.this.getSession().send(new ChatMessage(1038, Integer.toString(exp)));
                     }
                 }
             }
@@ -183,7 +200,7 @@ public class Player extends Unit {
         }
 
         if (this.session != null)
-            this.session.send(new ServerPacket(ServerCommands.AutoSpell).add(spellId));
+            this.session.send(new AutoSpellMessage(spellId));
     }
 
     public boolean isRelax() {
@@ -206,7 +223,7 @@ public class Player extends Unit {
 
         this.info.setHomeId(home.getId());
         if (this.session != null)
-            this.session.sendServerMessage(17, home.getRegion().getName());
+            this.session.send(new ChatMessage(17, home.getRegion().getName()));
     }
 
     public org.meds.net.Session getSession() {
@@ -337,9 +354,12 @@ public class Player extends Unit {
             onVisualChanged();
             onDisplayChanged();
             if (this.session != null)
-                this.session.sendServerMessage(497). // You gain a new level
-                        sendServerMessage(492). // You can learn new lesson in a guild
-                        send(this.getLevelData()).send(getParametersData());
+                this.session.send(Arrays.asList(
+                        new ChatMessage(497), // You gain a new level
+                        new ChatMessage(492), // You can a learn new lesson in a guild
+                        this.getLevelData(),
+                        this.getParametersData()
+                ));
         } else {
             if (this.session != null)
                 this.session.send(this.getLevelData(true));
@@ -367,22 +387,12 @@ public class Player extends Unit {
         this.info.setNotepad(notes);
     }
 
-    public ServerPacket getLevelData() {
-        return this.getLevelData(false);
+    public ServerMessage getLevelData() {
+        return new ExperienceMessage(this.getExp(), this.getReligExp(), this.getLevel(), this.getReligLevel());
     }
 
-    public ServerPacket getLevelData(boolean experienceOnly) {
-        ServerPacket packet = new ServerPacket(ServerCommands.Experience);
-        packet.add(this.getExp());
-        packet.add(this.getReligExp());
-
-        if (!experienceOnly) {
-            packet.add(this.getLevel());
-            packet.add("0");
-            packet.add(this.getReligLevel());
-        }
-
-        return packet;
+    public ServerMessage getLevelData(boolean experienceOnly) {
+        return new ExperienceMessage(this.getExp(), this.getReligExp());
     }
 
     protected void addExp(int value) {
@@ -468,13 +478,15 @@ public class Player extends Unit {
 
         this.group = new Group(this);
         if (this.session != null) {
-            this.session.send(new ServerPacket(ServerCommands.GroupCreated).add("1") // Created as leader
-                    .add(this.getId()) // Leader's ID
-            )
-                    .send(this.group.getSettingsData())
-                    .send(this.group.getTeamLootData())
-                    .sendServerMessage(270) // Group has been created
-                    .sendServerMessage(this.group.getTeamLootMode().getModeMessage());
+            // TODO: Move this to the Group class
+            List<ServerMessage> messages = Arrays.asList(
+                    new GroupCreatedMessage(true, this.getId()),
+                    this.group.getSettingsData(),
+                    this.group.getTeamLootData(),
+                    new ChatMessage(270), // Group has been created
+                    new ChatMessage(this.group.getTeamLootMode().getModeMessage())
+            );
+            this.session.send(messages);
         }
         // Show 'Group Leader' icon for everyone
         onVisualChanged();
@@ -496,9 +508,9 @@ public class Player extends Unit {
             if (this.session != null) {
                 this.group = group;
                 // Group Loot message
-                this.session.sendServerMessage(group.getTeamLootMode().getModeMessage())
-                        // "You join the group of {LEADER_NAME}
-                        .sendServerMessage(273, group.getLeader().getName());
+                this.session.send(new ChatMessage(group.getTeamLootMode().getModeMessage()));
+                // "You join the group of {LEADER_NAME}
+                this.session.send(new ChatMessage(273, group.getLeader().getName()));
             }
             // Say to everyone that the player changes its Leader's ID
             onVisualChanged();
@@ -682,109 +694,86 @@ public class Player extends Unit {
         daoFactory.getCharacterDAO().update(this.info);
     }
 
-    public ServerPacket getParametersData() {
-        return new ServerPacket(ServerCommands.PlayerInfo)
-                .add(this.id)
-                .add(this.getName())
-                .add(this.getAvatar())
-                .add("1248860848") // Seems like a date. but what the date???
-                .add(this.race.toString())
-                .add(0)
-                .add(this.clanId)
-                .add(this.clanMemberStatus)
-                .add(0) // Clan bonus???
-                .add(0) // TODO: SkullsCount
-                .add(this.parameters.base().value(Parameters.Intelligence))
-                .add(this.parameters.base().value(Parameters.Constitution))
-                .add(this.parameters.base().value(Parameters.Strength))
-                .add(this.parameters.base().value(Parameters.Dexterity))
-                .add(this.parameters.guild().value(Parameters.Constitution))
-                .add(this.parameters.guild().value(Parameters.Strength))
-                .add(this.parameters.guild().value(Parameters.Dexterity))
-                .add(this.parameters.guild().value(Parameters.Intelligence))
-                .add(this.parameters.guild().value(Parameters.Damage))
-                .add(this.parameters.guild().value(Parameters.Protection))
-                .add(this.parameters.guild().value(Parameters.ChanceToHit))
-                .add(this.parameters.guild().value(Parameters.Armour))
-                .add(this.parameters.guild().value(Parameters.ChanceToCast))
-                .add(this.parameters.guild().value(Parameters.MagicDamage))
-                .add(this.parameters.guild().value(Parameters.Health))
-                .add(this.parameters.guild().value(Parameters.Mana))
-                .add(this.parameters.guild().value(Parameters.HealthRegeneration))
-                .add(this.parameters.guild().value(Parameters.ManaRegeneration))
-                .add(this.parameters.guild().value(Parameters.FireResistance))
-                .add(this.parameters.guild().value(Parameters.FrostResistance))
-                .add(this.parameters.guild().value(Parameters.LightningResistance))
-                .add("9989") // StartCell ?
-                .add(this.settings.toString())
-                .add("1367478137") // Start Server Time
-                .add("16909320") // TODO: Version (or Version of what???)
-                .add(this.inventory.getCapacity())
-                .add("0")
-                .add("1") // TODO: Gender
-                .add("0"); // TODO: Religious status
+    public ServerMessage getParametersData() {
+        return new PlayerInfoMessage(
+                this.id,
+                this.getName(),
+                this.getAvatar(),
+                this.race.getValue(),
+                this.clanId,
+                this.clanMemberStatus.getValue(),
+                this.parameters.base().value(Parameters.Intelligence),
+                this.parameters.base().value(Parameters.Constitution),
+                this.parameters.base().value(Parameters.Strength),
+                this.parameters.base().value(Parameters.Dexterity),
+                this.parameters.guild().value(Parameters.Constitution),
+                this.parameters.guild().value(Parameters.Strength),
+                this.parameters.guild().value(Parameters.Dexterity),
+                this.parameters.guild().value(Parameters.Intelligence),
+                this.parameters.guild().value(Parameters.Damage),
+                this.parameters.guild().value(Parameters.Protection),
+                this.parameters.guild().value(Parameters.ChanceToHit),
+                this.parameters.guild().value(Parameters.Armour),
+                this.parameters.guild().value(Parameters.ChanceToCast),
+                this.parameters.guild().value(Parameters.MagicDamage),
+                this.parameters.guild().value(Parameters.Health),
+                this.parameters.guild().value(Parameters.Mana),
+                this.parameters.guild().value(Parameters.HealthRegeneration),
+                this.parameters.guild().value(Parameters.ManaRegeneration),
+                this.parameters.guild().value(Parameters.FireResistance),
+                this.parameters.guild().value(Parameters.FrostResistance),
+                this.parameters.guild().value(Parameters.LightningResistance),
+                this.settings.getValue(),
+                this.inventory.getCapacity()
+        );
     }
 
-    public ServerPacket getGuildData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.GuildInfo);
-        packet.add(guildRepository.size());
+    public ServerMessage getGuildData() {
+        List<GuildInfoMessage.Guild> guilds = new ArrayList<>(guildRepository.size());
         for (Guild guild : guildRepository) {
-            packet.add(guild.getId())
-                    .add(guild.getName())
-                    .add(guild.getPrevId());
             CharacterGuild characterGuild = this.info.getGuilds().get(guild.getId());
-            if (characterGuild == null)
-                packet.add("0");
-            else
-                packet.add(characterGuild.getLevel());
+            int level = characterGuild == null ? 0 : characterGuild.getLevel();
+
+            guilds.add(new GuildInfoMessage.Guild(
+                    guild.getId(),
+                    guild.getName(),
+                    guild.getPrevId(),
+                    level
+            ));
         }
-        return packet;
+        return new GuildInfoMessage(guilds);
     }
 
-    public ServerPacket getMagicData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.MagicInfo);
-        packet.add(spellRepository.size());
-
+    public ServerMessage getMagicData() {
+        List<MagicInfoMessage.SpellInfo> spellInfos = new ArrayList<>(spellRepository.size());
         for (Spell spell : spellRepository) {
-            packet.add(spell.getId())
-                    .add(spell.getType().toString())
-                    .add(spell.getName());
             CharacterSpell characterSpell = this.info.getSpells().get(spell.getId());
-            if (characterSpell == null)
-                packet.add("0");
-            else
-                packet.add(characterSpell.getLevel());
+            int level = characterSpell == null ? 0 : characterSpell.getLevel();
+            spellInfos.add(new MagicInfoMessage.SpellInfo(
+                    spell.getId(), spell.getType().getValue(), spell.getName(), level
+            ));
         }
-        return packet;
+        return new MagicInfoMessage(spellInfos);
     }
 
-    public ServerPacket getSkillData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.SkillInfo);
-        packet.add(skillRepository.size());
-
+    public ServerMessage getSkillData() {
+        List<SkillInfoMessage.SkillInfo> skillInfos = new ArrayList<>(skillRepository.size());
         for (Skill skill : skillRepository) {
-            packet.add(skill.getId())
-                    .add(skill.getName());
             CharacterSkill characterSkill = this.info.getSkills().get(skill.getId());
-            if (characterSkill == null)
-                packet.add("0");
-            else
-                packet.add(characterSkill.getLevel());
+            int level = characterSkill == null ? 0 : characterSkill.getLevel();
+
+            skillInfos.add(new SkillInfoMessage.SkillInfo(skill.getId(), skill.getName(), level));
         }
-        return packet;
+        return new SkillInfoMessage(skillInfos);
     }
 
-    public ServerPacket getGuildLevelData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.GuildLevels);
-        packet.add(this.guildLevel);
-        packet.add(this.info.getGuilds().size());
-        Guild guildEntry;
+    public ServerMessage getGuildLevelData() {
+        List<GuildLevelsMessage.GuildInfo> infos = new ArrayList<>(this.info.getGuilds().size());
         for (CharacterGuild guild : this.info.getGuilds().values()) {
-            guildEntry = guildRepository.get(guild.getGuildId());
-            packet.add(guildEntry.getName());
-            packet.add(guild.getLevel());
+            Guild guildEntry = guildRepository.get(guild.getGuildId());
+            infos.add(new GuildLevelsMessage.GuildInfo(guildEntry.getName(), guild.getLevel()));
         }
-        return packet;
+        return new GuildLevelsMessage(this.guildLevel, infos);
     }
 
     public void learnGuildLesson(Guild guild) {
@@ -823,12 +812,14 @@ public class Player extends Unit {
         ++this.guildLevel;
 
         if (this.session != null) {
-            session.sendServerMessage(498);
-            // TODO: Implement sound sending (Sound 31 here)
-            session.send(new ServerPacket()
-                    .add(this.getMagicData())
-                    .add(this.getParametersData())
-                    .add(this.getGuildLevelData()));
+            List<ServerMessage> messages = Arrays.asList(
+                    new ChatMessage(498),
+                    // TODO: Send sound here (Sound 31)
+                    getMagicData(),
+                    getParametersData(),
+                    getGuildLevelData()
+            );
+            session.send(messages);
         }
     }
 
@@ -894,10 +885,11 @@ public class Player extends Unit {
         --this.guildLevel;
 
         if (this.session != null) {
-            session.send(new ServerPacket()
-                    .add(this.getMagicData())
-                    .add(this.getParametersData())
-                    .add(this.getGuildLevelData()));
+            session.send(Arrays.asList(
+                    getMagicData(),
+                    getParametersData(),
+                    getGuildLevelData()
+            ));
         }
     }
 
@@ -933,63 +925,61 @@ public class Player extends Unit {
         }
     }
 
-    public ServerPacket getAchievementData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.AchievementList);
-        packet.add(0); // List of all achievements
-
+    public ServerMessage getAchievementData() {
+        List<AchievementsMessage.AchievementInfo> achievements = new ArrayList<>(this.achievementRepository.size());
         for (Achievement achievement : achievementRepository) {
-            packet.add(achievement.getId());
-            packet.add(achievement.getTitle());
-            packet.add(achievement.getDescription());
-
+            int progress = 0;
+            int completeDate = 0;
             CharacterAchievement charAchieve;
             if ((charAchieve = getAchievement(achievement.getId())) != null) {
-                packet.add(charAchieve.getProgress());
-                packet.add(achievement.getCount());
-                packet.add(charAchieve.getCompleteDate());
-            } else {
-                packet.add(0);
-                packet.add(achievement.getCount());
-                packet.add(0);
+                progress = charAchieve.getProgress();
+                completeDate = charAchieve.getCompleteDate();
             }
-            packet.add(achievement.getCategoryId());
-            packet.add(achievement.getPoints());
+            achievements.add(new AchievementsMessage.AchievementInfo(
+                    achievement.getId(),
+                    achievement.getTitle(),
+                    achievement.getDescription(),
+                    progress,
+                    achievement.getCount(),
+                    completeDate,
+                    achievement.getCategoryId(),
+                    achievement.getPoints()
+            ));
         }
 
-        return packet;
+        return new AchievementsMessage(achievements);
     }
 
-    public ServerPacket getCurrencyData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.Currencies);
+    public ServerMessage getCurrencyData() {
+        List<CurrenciesMessage.CurrencyInfo> infos = new ArrayList<>(this.currencyRepository.size());
         for (Currency currency : currencyRepository) {
-            packet.add(currency.getId())
-                    .add(currency.getUnk2())
-                    .add(currency.getTitle())
-                    .add(currency.getDescription())
-                    .add(currency.getUnk5())
-                    .add(currency.isDisabled() ? "1" : "0")
-                    .add(getCurrencyAmount(currency.getId()));
+            infos.add(new CurrenciesMessage.CurrencyInfo(
+                    currency.getId(),
+                    currency.getUnk2(),
+                    currency.getTitle(),
+                    currency.getDescription(),
+                    currency.getUnk5(),
+                    currency.isDisabled(),
+                    getCurrencyAmount(currency.getId()))
+            );
         }
-        return packet;
+        return new CurrenciesMessage(infos);
     }
 
-    public ServerPacket getProfessionData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.Professions);
-        packet.add(this.professions.length);
+    public ServerMessage getProfessionData() {
+        List<ProfessionsMessage.ProfessionInfo> infos = new ArrayList<>(this.professions.length);
         for (Profession profession : this.professions) {
-            packet.add(locale.getString(profession.getProfession().getTitleId()))
-                    .add(profession.getLevel())
-                    .add(profession.getExperience());
+            infos.add(new ProfessionsMessage.ProfessionInfo(
+                    locale.getString(profession.getProfession().getTitleId()),
+                    profession.getLevel(),
+                    profession.getExperience()
+            ));
         }
-        return packet;
+        return new ProfessionsMessage(infos);
     }
 
-    @Override
-    public ServerPacket getHealthManaData() {
-        return new ServerPacket(ServerCommands.Health).
-                add(this.health).
-                add(this.mana).
-                add("0"); // Unknown. Always is 0.
+    public ServerMessage getHealthManaData() {
+        return new HealthMessage(this.health,this.mana);
     }
 
     private void onCurrencyChanged(int currencyId, int difference) {
@@ -997,7 +987,7 @@ public class Player extends Unit {
 
         // Partial Data change
         if (this.session != null)
-            this.session.send(new ServerPacket(ServerCommands.Currency).add(currencyId).add(getCurrencyAmount(currencyId)));
+            this.session.send(new CurrencyUpdateMessage(currencyId, getCurrencyAmount(currencyId)));
     }
 
     @Override
@@ -1007,11 +997,12 @@ public class Player extends Unit {
         this.deathState = DeathStates.Dead;
 
         if (this.session != null) {
+            List<ServerMessage> messages = new ArrayList<>();
             // TODO: why do we send relax state?
-            //player.Session.AddData("r0");
-            ServerPacket packet = new ServerPacket(ServerCommands._lh0).add("");
-            packet.add(ServerCommands.NoGo).add(this.getHome().getId());
-            this.session.send(packet);
+            // messages.add(new RelaxOffMessage());
+            messages.add(new _lh0Message());
+            messages.add(new NoGoMessage(this.getHome().getId()));
+            this.session.send(messages);
         }
         this.setPosition(this.getHome());
         this.deathState = DeathStates.Alive;
@@ -1023,14 +1014,13 @@ public class Player extends Unit {
     public void lootCorpse(Corpse corpse) {
         // Money
         if (corpse.getGold() > 0) {
-            if (this.session != null)
-                this.session.sendServerMessage(998, corpse.getOwner().getName(), Integer.toString(corpse.getGold()), locale.getString(2));
-            this.position.send(this,
-                    new ServerPacket(ServerCommands.ServerMessage)
-                            .add("999").add(this.getName())
-                            .add(corpse.getOwner().getName())
-                            .add(corpse.getGold())
-                            .add(locale.getString(2)));
+            if (this.session != null) {
+                this.session.send(new ChatMessage(
+                        998, corpse.getOwner().getName(), corpse.getGold(), locale.getString(2)
+                ));
+            }
+            this.position.send(this, new ChatMessage(999, this.getName(),
+                    corpse.getOwner().getName(), corpse.getGold(), locale.getString(2)));
             this.changeCurrency(Currencies.Gold, corpse.getGold());
         }
 
@@ -1038,15 +1028,12 @@ public class Player extends Unit {
         items.forEach(item -> {
             String itemTitle = itemTitleConstructor.getTitle(item);
             if (this.session != null) {
-                this.session.sendServerMessage(998, corpse.getOwner().getName(), item.getCount() > 1 ? item.getCount() + " " : "", itemTitle);
+                this.session.send(new ChatMessage(
+                       998, corpse.getOwner().getName(), item.getCount() > 1 ? item.getCount() + " " : "", itemTitle
+                ));
             }
-            this.position.send(this,
-                    new ServerPacket(ServerCommands.ServerMessage)
-                            .add("999")
-                            .add(this.getName())
-                            .add(corpse.getOwner().getName())
-                            .add(item.getCount() > 1 ? item.getCount() + " " : "")
-                            .add(itemTitle));
+            this.position.send(this, new ChatMessage(999, this.getName(),
+                    corpse.getOwner().getName(), item.getCount() > 1 ? item.getCount() + " " : "", itemTitle));
             this.inventory.tryStoreItem(item);
             // TODO: leave corpse if a player didn't take all the loot
         });
@@ -1072,76 +1059,86 @@ public class Player extends Unit {
         // Examine a creature
         else if (target.getUnitType() == UnitTypes.Creature) {
             Creature creature = (Creature) target;
-            ServerPacket packet = null;
+            List<ServerMessage> messages = new ArrayList<>();
 
             int lineIteration = 1;
             // The first parameter can be seen after 50 creatures of this level;
             double practise = this.info.getPractiseValue() / creature.getLevel() / 50;
             do {
+                String[] params;
                 switch (lineIteration) {
                     // Health, Mana, Damage, Magic Damage
                     case 1: // 50 pcs
-                        packet = new ServerPacket(ServerCommands.ServerMessage).add(1265);
-                        packet.add(creature.getHealth() + "/" + creature.getParameters().value(Parameters.Health));
-                        packet.add(creature.getMana());
-                        packet.add(creature.getParameters().value(Parameters.Mana));
+                        params = new String[5];
+                        params[0] = creature.getHealth() + "/" + creature.getParameters().value(Parameters.Health);
+                        params[1] = Integer.toString(creature.getMana());
+                        params[2] = Integer.toString(creature.getParameters().value(Parameters.Mana));
                         // Physical and Magic Damage
                         practise /= 2; // 100 pcs
                         if (practise < 1) {
-                            packet.add("?/?");
-                            packet.add("?");
+                            params[3] = "?/?";
+                            params[4] = "?";
                         } else {
-                            packet.add(creature.getParameters().value(Parameters.Damage) + "/" +
-                                    creature.getParameters().value(Parameters.MaxDamage));
-                            packet.add(creature.getParameters().value(Parameters.MagicDamage));
+                            params[3] = creature.getParameters().value(Parameters.Damage) + "/" +
+                                    creature.getParameters().value(Parameters.MaxDamage);
+                            params[4] = Integer.toString(creature.getParameters().value(Parameters.MagicDamage));
                         }
+                        messages.add(new ChatMessage(1265, params));
                         break;
                     // Protection, Health and Mana Regeneration, Chances to Hit and Cast
                     case 2: // 200 pcs
-                        packet.add(ServerCommands.ServerMessage).add(1266);
+                        params = new String[5];
                         //Protection
-                        packet.add(creature.getParameters().value(Parameters.Protection));
+                        params[0] = Integer.toString(creature.getParameters().value(Parameters.Protection));
 
                         // Health and Mana Regeneration
                         practise /= 2; // 400 pcs
                         if (practise < 1d) {
-                            packet.add("?").add("?");
+                            params[1] = "?";
+                            params[2] = "?";
                         } else {
-                            packet.add(creature.getParameters().value(Parameters.HealthRegeneration));
-                            packet.add(creature.getParameters().value(Parameters.ManaRegeneration));
+                            params[1] = Integer.toString(creature.getParameters().value(Parameters.HealthRegeneration));
+                            params[2] = Integer.toString(creature.getParameters().value(Parameters.ManaRegeneration));
                         }
 
                         // Chance to Hit and Chance to Cast
                         practise /= 2; // 800 pcs
                         if (practise < 1d) {
-                            packet.add("?").add("?");
+                            params[3] = "?";
+                            params[4] = "?";
                         } else {
-                            packet.add(creature.getParameters().value(Parameters.ChanceToHit));
-                            packet.add(creature.getParameters().value(Parameters.ChanceToCast));
+                            params[3] = Integer.toString(creature.getParameters().value(Parameters.ChanceToHit));
+                            params[4] = Integer.toString(creature.getParameters().value(Parameters.ChanceToCast));
                         }
+                        messages.add(new ChatMessage(1266, params));
                         break;
                     // Armour, Resists
                     case 3: // 1600 pcs
-                        packet.add(ServerCommands.ServerMessage).add(1267);
-                        packet.add(creature.getParameters().value(Parameters.Armour));
+                        params = new String[4];
+                        params[0] = Integer.toString(creature.getParameters().value(Parameters.Armour));
 
                         // Resists
                         practise /= 2; //3200 pcs
                         if (practise < 1d) {
-                            packet.add("?").add("?").add("?");
+                            params[1] = "?";
+                            params[2] = "?";
+                            params[3] = "?";
                         } else {
-                            packet.add(creature.getParameters().value(Parameters.FireResistance));
-                            packet.add(creature.getParameters().value(Parameters.FrostResistance));
-                            packet.add(creature.getParameters().value(Parameters.LightningResistance));
+                            params[1] = Integer.toString(creature.getParameters().value(Parameters.FireResistance));
+                            params[2] = Integer.toString(creature.getParameters().value(Parameters.FrostResistance));
+                            params[3] = Integer.toString(creature.getParameters().value(Parameters.LightningResistance));
                         }
+                        messages.add(new ChatMessage(1267, params));
                         break;
                     // Stats
                     case 4: // 6400 pcs
-                        packet.add(ServerCommands.ServerMessage).add("1271");
-                        packet.add(creature.getParameters().value(Parameters.Strength));
-                        packet.add(creature.getParameters().value(Parameters.Dexterity));
-                        packet.add(creature.getParameters().value(Parameters.Intelligence));
-                        packet.add(creature.getParameters().value(Parameters.Constitution));
+                        messages.add(new ChatMessage(
+                                1271,
+                                creature.getParameters().value(Parameters.Strength),
+                                creature.getParameters().value(Parameters.Dexterity),
+                                creature.getParameters().value(Parameters.Intelligence),
+                                creature.getParameters().value(Parameters.Constitution)
+                        ));
                         break;
                     // Current loot
                     case 5: // 12800 pcs
@@ -1149,46 +1146,48 @@ public class Player extends Unit {
                         while (lootIterator.hasNext()) {
                             Item item = lootIterator.next();
                             String itemTitle = itemTitleConstructor.getTitle(item);
-                            packet.add(ServerCommands.ServerMessage).add(1268).add(creature.getTemplate().getName());
-                            if (item.getCount() == 1) {
-                                packet.add(itemTitle);
-                            } else {
-                                packet.add(item.getCount() + " " + itemTitle);
+                            if (item.getCount() > 1) {
+                                itemTitle = item.getCount() + " " + itemTitle;
                             }
+                            messages.add(new ChatMessage(1268, creature.getTemplate().getName(), itemTitle));
                         }
                         break;
                     // Creature max gold
                     case 6: // 25600 pcs
                         // Humanoids only
-                        if (creature.getTemplate().hasFlag(CreatureFlags.Beast))
-                            break;
-                        packet.add(ServerCommands.ServerMessage).add(1269)
-                                .add(creature.getTemplate().getName()).add(creature.getMaxGoldValue());
+                        if (!creature.getTemplate().hasFlag(CreatureFlags.Beast)) {
+                            messages.add(new ChatMessage(
+                                    1269,
+                                    creature.getTemplate().getName(),
+                                    creature.getMaxGoldValue()
+                            ));
+                        }
                         break;
                     // Creature current gold tip
                     case 7: // 51,200 pcs
                         // Humanoids only
                         if (creature.getTemplate().hasFlag(CreatureFlags.Beast))
                             break;
-                        packet.add(ServerCommands.ServerMessage);
+                        int messageId;
                         double goldLoad = 1d * creature.getCashGold() / creature.getMaxGoldValue();
 
                         // Almost nothing
                         if (creature.getCashGold() < creature.getMinGoldValue()) {
-                            packet.add(1307);
+                            messageId = 1307;
                         }
                         // a little
                         else if (goldLoad <= 0.25) {
-                            packet.add(1306);
+                            messageId = 1306;
                         }
                         // medium
                         else if (goldLoad <= 0.75) {
-                            packet.add(1305);
+                            messageId = 1305;
                         }
                         // Much (loading over 75%)
                         else {
-                            packet.add(1304);
+                            messageId = 1304;
                         }
+                        messages.add(new ChatMessage(messageId));
                         break;
                     // Loot chances
                     case 8: // 102,400 pcs
@@ -1213,17 +1212,21 @@ public class Player extends Unit {
                 typeTitle = locale.getString(34);
             }
 
-            ServerPacket total = new ServerPacket(ServerCommands.ServerMessage);
-            if (packet == null) {
-                total.add(1260);
+            int openingMessageId = messages.isEmpty() ? 1260 : 1261;
+
+            ServerMessage openingMessage = new ChatMessage(
+                    openingMessageId,
+                    creature.getTemplate().getName(),
+                    creature.getTemplate().getName(),
+                    typeTitle
+            );
+
+            if (messages.isEmpty()) {
+                messages.add(openingMessage);
             } else {
-                total.add(1261);
+                messages.add(0, openingMessage);
             }
-            total.add(creature.getTemplate().getName());
-            total.add(creature.getTemplate().getName());
-            total.add(typeTitle);
-            total.add(packet);
-            this.session.send(total);
+            this.session.send(messages);
         }
     }
 
@@ -1266,9 +1269,12 @@ public class Player extends Unit {
                         return;
                 }
 
+                if (this.session == null) {
+                    return;
+                }
+
                 // Prepare quest List data to send to the player. Then the player will choose the one.
-                ServerPacket packet = new ServerPacket(ServerCommands.NpcQuestList);
-                int count = 0;
+                NpcQuestsMessage.Builder questBuilder = new NpcQuestsMessage.Builder();
                 // Search through quest relations of the NPC
                 for (CreatureQuestRelation creatureQuest : creatureQuests) {
                     QuestTemplate template = questTemplateRepository.get(creatureQuest.getQuestTemplateId());
@@ -1280,22 +1286,17 @@ public class Player extends Unit {
                             && template.getLevel() <= this.getLevel()) {
                         // Player has not taken the quest before
                         quest = getQuest(creatureQuest.getQuestTemplateId());
-                        if (quest != null)
+                        if (quest != null) {
                             continue;
-
-                        packet.add(template.getId());
-                        packet.add(template.getTitle());
-                        ++count;
+                        }
+                        questBuilder.addQuest(template.getId(), template.getTitle());
                     }
                 }
 
-                if (count == 0)
+                if (questBuilder.size() == 0) {
                     return;
-
-                if (this.session != null) {
-                    this.session.send(packet);
                 }
-
+                this.session.send(questBuilder.build());
                 return;
             }
         }
@@ -1337,7 +1338,7 @@ public class Player extends Unit {
     @Override
     public void addServerMessage(int messageId, String... args) {
         if (this.session != null)
-            this.session.sendServerMessage(messageId, args);
+            this.session.send(new ChatMessage(messageId, args));
     }
 
     /**
@@ -1366,7 +1367,7 @@ public class Player extends Unit {
                         if (aura.isPermanent())
                             continue;
 
-                        this.session.send(aura.getPacketData());
+                        this.session.send(aura.getBonusMessages());
                     }
                 }
             }

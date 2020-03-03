@@ -1,7 +1,7 @@
-package org.meds.net;
+package org.meds.net.message;
 
-public enum ServerCommands
-{
+public enum ServerMessageIdentity implements MessageIdentity {
+
     Aura("a"),
     AchievementList("acl"),
     AchievementUpdate("acu"),
@@ -49,9 +49,9 @@ public enum ServerCommands
     GuildLevels("lvl"),
     AutoSpell("mb"),
     Notepad("mem"),
-    ServerMessage("mes"),
+    ChatMessage("mes"),
     MagicInfo("mi"),
-    ChatMessage("msg"),
+    SocialChatMessage("msg"),
     MessageList("msl"),
     NoGo("ng"),
     _omg("omg"),
@@ -87,16 +87,23 @@ public enum ServerCommands
     _wg("wg"),
     _zzz("zzz");
 
-    private final String value;
+    private final String identity;
 
-    private ServerCommands(String value)
-    {
-        this.value = value;
+    ServerMessageIdentity(String identity) {
+        this.identity = identity;
     }
 
     @Override
-    public String toString()
-    {
-        return this.value;
+    public String identity() {
+        return this.identity;
+    }
+
+    /**
+     * TODO: Remove this method prior {@link #identity()} usages.
+     *  This method should have standard Enum implementation and must be used for debugging purposes only.
+     */
+    @Override
+    public String toString() {
+        return this.identity;
     }
 }

@@ -2,8 +2,12 @@ package org.meds;
 
 import org.meds.data.domain.CharacterInventoryItem;
 import org.meds.item.*;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.ChatMessage;
+import org.meds.net.message.server.EquipmentMessage;
+import org.meds.net.message.server.InventoryMessage;
+import org.meds.net.message.server.InventoryUpdateMessage;
+import org.meds.net.message.server.ItemInfo;
 import org.meds.util.Valued;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -229,55 +233,54 @@ public class Inventory {
         }
     }
 
-    public ServerPacket getInventoryData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.InventoryInfo);
-        packet.add(0); // Count of bought slots
-        packet.add("5 platinum"); // Cost of new slots
-        packet.add(25); // Current available count of slots
-
+    public ServerMessage getInventoryData() {
+        List<ItemInfo> items = new ArrayList<>(25);
         for (int i = Slots.Inventory1.getValue(); i < InventorySlotCount + Slots.Inventory1.getValue(); ++i) {
-            if (this.inventorySlots[i] == null) {
-                packet.add("0").add("0").add("0").add("0");
+            Item item = this.inventorySlots[i];
+            if (item == null) {
+                items.add(new ItemInfo());
                 continue;
             }
-
-            packet.add(this.inventorySlots[i].getTemplate().getId());
-            packet.add(this.inventorySlots[i].getModification().getValue());
-            packet.add(this.inventorySlots[i].getDurability());
-            packet.add(this.inventorySlots[i].getCount());
+            items.add(new ItemInfo(
+                    item.getTemplate().getId(),
+                    item.getModification(),
+                    item.getDurability(),
+                    item.getCount()
+            ));
         }
-        return packet;
+        return new InventoryMessage(items);
     }
 
-    public ServerPacket getEquipmentData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.EquipmentInfo);
+    public ServerMessage getEquipmentData() {
+        List<ItemInfo> items = new ArrayList<>(EquipmentSlotCount);
         for (int i = 0; i < EquipmentSlotCount; ++i) {
-            if (this.inventorySlots[i] == null) {
-                packet.add("0").add("0").add("0").add("0");
+            Item item = this.inventorySlots[i];
+            if (item == null) {
+                items.add(new ItemInfo());
                 continue;
             }
-
-            packet.add(this.inventorySlots[i].getTemplate().getId());
-            packet.add(this.inventorySlots[i].getModification().getValue());
-            packet.add(this.inventorySlots[i].getDurability());
-            packet.add("1"); // Seems equipment count always equals 1.
+            items.add(new ItemInfo(
+                    item.getTemplate().getId(),
+                    item.getModification(),
+                    item.getDurability(),
+                    1 // Seems like equipment count is always 1.
+            ));
         }
-        return packet;
+        return new EquipmentMessage(items);
     }
 
-    public ServerPacket getUpdatedSlotData(int slot) {
-        ServerPacket packet = new ServerPacket(ServerCommands.InventoryUpdate);
-        packet.add(slot);
-        if (this.inventorySlots[slot] == null) {
-            packet.add("0").add("0").add("0").add("0");
-        } else {
-            packet.add(this.inventorySlots[slot].getTemplate().getId());
-            packet.add(this.inventorySlots[slot].getModification().getValue());
-            packet.add(this.inventorySlots[slot].getDurability());
-            packet.add(this.inventorySlots[slot].getCount());
+    public ServerMessage getUpdatedSlotData(int slot) {
+        Item item = this.inventorySlots[slot];
+        if (item == null) {
+            return new InventoryUpdateMessage(slot);
         }
 
-        return packet;
+        return new InventoryUpdateMessage(slot, new ItemInfo(
+                item.getTemplate().getId(),
+                item.getModification(),
+                item.getDurability(),
+                item.getCount()
+        ));
     }
 
     public void swapItem(int currentSlot, int newSlot, int count) {
@@ -629,7 +632,9 @@ public class Inventory {
             item = item.unstackItem(count);
 
         // Send Message
-        this.owner.getSession().sendServerMessage(1016, count > 1 ? Integer.toString(count) + " " : "", itemTitleConstructor.getTitle(item));
+        this.owner.getSession().send(new ChatMessage(
+                1016, count > 1 ? count + " " : "", itemTitleConstructor.getTitle(item)
+        ));
 
         // Personal items are destroyed completely
         // Others are thrown to the ground

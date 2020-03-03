@@ -7,6 +7,9 @@ import org.meds.Player;
 import org.meds.World;
 import org.meds.data.dao.DAOFactory;
 import org.meds.data.domain.Character;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.ServerMessageIdentity;
+import org.meds.net.message.StringDelimitedMessageWriteStream;
 import org.meds.server.Server;
 import org.meds.util.DateFormatter;
 import org.meds.util.Random;
@@ -69,7 +72,12 @@ public class Session implements Runnable {
 
     private Player player;
 
-    private ServerPacket packetBuffer;
+    /**
+     * Current message stream as a buffer.
+     *
+     * @todo Insure thread-safety of this buffer
+     */
+    private StringDelimitedMessageWriteStream messageWriteStream;
 
     /**
      * Indicating whether the player passed login verification successful and loaded from DB.
@@ -93,7 +101,7 @@ public class Session implements Runnable {
         this.socket = socket;
 
         this.listeners = new HashSet<>();
-        this.packetBuffer = new ServerPacket();
+        this.messageWriteStream = new StringDelimitedMessageWriteStream();
 
         this.key = Random.nextInt(2000000000) + 100000000;
 
@@ -240,37 +248,33 @@ public class Session implements Runnable {
      * Sends an accumulated packet buffer for the current session.
      */
     private void send() {
-        if (this.packetBuffer == null || this.packetBuffer.isEmpty()) {
+        if (this.messageWriteStream == null || this.messageWriteStream.isEmpty()) {
             return;
         }
 
         OutputStream os;
         try {
             os = this.socket.getOutputStream();
-            byte[] bytes = packetBuffer.getBytes();
+            byte[] bytes = messageWriteStream.getBytes();
             os.write(bytes);
             logger.debug("{} :: Sending data: {}",
-                    this::toString, () -> packetBuffer.toString().replace('\u0000', '\n'));
+                    this::toString, () -> messageWriteStream.toString().replace('\u0000', '\n'));
         } catch (IOException e) {
             logger.error(toString() + " :: IOException writing to a socket:", e);
         } finally {
             // Clean it anyway
-            this.packetBuffer.clear();
+            this.messageWriteStream = new StringDelimitedMessageWriteStream();
         }
     }
 
-    public Session send(ServerPacket packet) {
-        this.packetBuffer.add(packet);
+    public void send(ServerMessage message) {
+        this.messageWriteStream.newMessage(message.getIdentity());
         Session.sessionsToSend.add(this);
-        return this;
+        message.serialize(this.messageWriteStream);
     }
 
-    public Session sendServerMessage(int messageId, String... values) {
-        ServerPacket packet = new ServerPacket(ServerCommands.ServerMessage).add(messageId);
-        for (String string : values)
-            packet.add(string);
-        this.send(packet);
-        return this;
+    public void send(Iterable<ServerMessage> messages) {
+        messages.forEach(this::send);
     }
 
     @Override

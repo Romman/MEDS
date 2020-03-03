@@ -6,8 +6,7 @@ import org.meds.item.Item;
 import org.meds.item.ItemBonusParameters;
 import org.meds.item.ItemClasses;
 import org.meds.item.ItemSubClassWeapon;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.server.ChatMessage;
 import org.meds.util.Random;
 
 public class Spell {
@@ -93,7 +92,7 @@ public class Spell {
         }
 
         if (this.caster.isPlayer() && ((Player) this.caster).getSession() != null) {
-            ((Player) this.caster).getSession().sendServerMessage(501, Integer.toString(recoveredHealth));
+            ((Player) this.caster).getSession().send(new ChatMessage(501, Integer.toString(recoveredHealth)));
         }
 
         this.caster.changeHealth(recoveredHealth);
@@ -192,10 +191,7 @@ public class Spell {
         }
         if (this.caster != null)
             target.getPosition().send(this.caster, this.target,
-                    new ServerPacket(ServerCommands.ServerMessage)
-                            .add(positionMessage)
-                            .add(this.caster.getName())
-                            .add(this.target.getName()));
+                    new ChatMessage(positionMessage, this.caster.getName(), this.target.getName()));
     }
 
     private void handleSpellBattleMagic() {
@@ -406,6 +402,6 @@ public class Spell {
         Player player = (Player) unit;
         if (player.getSession() == null)
             return;
-        player.getSession().sendServerMessage(messageId, data);
+        player.getSession().send(new ChatMessage(messageId, data));
     }
 }

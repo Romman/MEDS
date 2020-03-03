@@ -1,9 +1,15 @@
 package org.meds;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.meds.enums.Currencies;
 import org.meds.item.Item;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.Session;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.GetTradeMessage;
+import org.meds.net.message.server.ItemInfo;
+import org.meds.net.message.server.TradeResultMessage;
+import org.meds.net.message.server.TradeUpdateMessage;
 import org.meds.util.Valued;
 
 public class Trade {
@@ -67,25 +73,29 @@ public class Trade {
             this.platinum = platinum;
         }
 
-        public ServerPacket getSupplyData() {
-            ServerPacket packet = new ServerPacket(ServerCommands.TradeUpdate);
-            packet.add(Trade.this.player.getId());
+        public ServerMessage getSupplyData() {
+            List<ItemInfo> itemInfos = new ArrayList<>(3);
             for (int i = 0; i < ITEM_SLOTS_COUNT; ++i) {
-                if (this.items[i] == null) {
-                    packet.add("0").add("0").add("0").add("0");
+                Item item = this.items[i];
+                if (item == null) {
+                    itemInfos.add(new ItemInfo());
                 } else {
-                    packet.add(this.items[i].getTemplate().getId());
-                    packet.add(this.items[i].getModification());
-                    packet.add(this.items[i].getDurability());
-                    packet.add(this.items[i].getCount());
+                    itemInfos.add(new ItemInfo(
+                            item.getTemplate().getId(),
+                            item.getModification(),
+                            item.getDurability(),
+                            item.getCount()
+                    ));
                 }
             }
-            packet.add(this.gold);
-            packet.add(this.platinum);
-            packet.add(Trade.this.agreedDemand == null ? "0" : "1");
-            packet.add("0"); // ???
 
-            return packet;
+            return new TradeUpdateMessage(
+                    Trade.this.player.getId(),
+                    itemInfos,
+                    this.gold,
+                    this.platinum,
+                    Trade.this.agreedDemand == null
+            );
         }
 
         @Override
@@ -142,7 +152,7 @@ public class Trade {
         side2.setTrade(this.otherSide);
 
         if (side2.getSession() != null) {
-            side2.getSession().send(new ServerPacket(ServerCommands.GetTrade).add(side1.getId()));
+            side2.getSession().send(new GetTradeMessage(side1.getId()));
         }
     }
 
@@ -178,12 +188,12 @@ public class Trade {
         this.player.setTrade(null);
         this.otherSide.player.setTrade(null);
         // Send Trade result
-        ServerPacket packet = new ServerPacket(ServerCommands.TradeResult).add(result).add("0").add("0");
+        ServerMessage resultMessage = new TradeResultMessage(result);
         if (this.player.getSession() != null) {
-            this.player.getSession().send(packet);
+            this.player.getSession().send(resultMessage);
         }
         if (this.otherSide.player.getSession() != null) {
-            this.otherSide.player.getSession().send(packet);
+            this.otherSide.player.getSession().send(resultMessage);
         }
     }
 
@@ -279,8 +289,11 @@ public class Trade {
     }
 
     public void sendTradeData() {
-        if (this.player.getSession() != null) {
-            this.player.getSession().send(this.currentSupply.getSupplyData()).send(this.otherSide.currentSupply.getSupplyData());
+        Session session = this.player.getSession();
+        if (session == null) {
+            return;
         }
+        session.send(this.currentSupply.getSupplyData());
+        session.send(this.otherSide.currentSupply.getSupplyData());
     }
 }

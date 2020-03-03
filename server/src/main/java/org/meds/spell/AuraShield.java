@@ -2,11 +2,12 @@ package org.meds.spell;
 
 import org.meds.Damage;
 import org.meds.Damage.AffectionHandler;
+import org.meds.net.message.server.ChatMessage;
 
 public class AuraShield extends Aura {
 
     private class AbsorptionHandler implements AffectionHandler {
-        
+
         @Override
         public boolean handle(Damage damage) {
             int cleanDamage = damage.FinalDamage - damage.Absorbed;
@@ -31,7 +32,7 @@ public class AuraShield extends Aura {
         super.applyAura();
         // Server message
         if (this.ownerPlayer != null && this.ownerPlayer.getSession() != null && this.spellEntry.getId() == 1141)
-            this.ownerPlayer.getSession().sendServerMessage(476);
+            this.ownerPlayer.getSession().send(new ChatMessage(476));
         this.absorptionHandler = new AbsorptionHandler();
         this.owner.addDamageReduction(Damage.ReductionTypes.Absorption, this.absorptionHandler);
     }
@@ -48,6 +49,6 @@ public class AuraShield extends Aura {
         this.owner.removeDamageReduction(Damage.ReductionTypes.Absorption, this.absorptionHandler);
         // Server message
         if (this.ownerPlayer != null && this.ownerPlayer.getSession() != null && this.spellEntry.getId() == 1141)
-            this.ownerPlayer.getSession().sendServerMessage(477);
+            this.ownerPlayer.getSession().send(new ChatMessage(477));
     }
 }

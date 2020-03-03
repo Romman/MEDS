@@ -3,8 +3,8 @@ package org.meds;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.meds.enums.BattleStates;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.server.BattleMessage;
+import org.meds.net.message.server.ChatMessage;
 import org.meds.util.Random;
 
 import java.util.HashSet;
@@ -86,7 +86,7 @@ public class Battle {
         }
         Player player = (Player)unit;
         if (player.getSession() != null) {
-            player.getSession().send(new ServerPacket(ServerCommands.BattleState).add(state));
+            player.getSession().send(new BattleMessage(state));
         }
     }
 
@@ -143,14 +143,14 @@ public class Battle {
                     attacker.setTarget(null);
                     // Send run away result message
                     if (player != null) {
-                        player.getSession().sendServerMessage(39, target.getName());
+                        player.getSession().send(new ChatMessage(39, target.getName()));
                     }
                     // Relocate target
                     attacker.setPosition(attacker.getPosition().getRandomNeighbour(attacker.isPlayer(), attacker.isPlayer()));
                 }
                 // Send Fail message
                 else if (player != null) {
-                    player.getSession().sendServerMessage(42, target.getName());
+                    player.getSession().send(new ChatMessage(42, target.getName()));
                 }
                 // TODO: solve isPermanent runaway state problem.
             } else {

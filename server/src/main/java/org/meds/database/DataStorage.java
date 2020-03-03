@@ -6,8 +6,8 @@ import org.meds.data.dao.DAOFactory;
 import org.meds.data.dao.WorldDAO;
 import org.meds.data.domain.*;
 import org.meds.database.repository.*;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.GuildLessonMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -49,7 +49,7 @@ public class DataStorage {
     @Autowired
     private SpellRepository spellRepository;
 
-    private Map<Integer, ServerPacket> guildLessonsInfo;
+    private Map<Integer, ServerMessage> guildLessonsInfo;
 
     public void loadRepositories() {
         WorldDAO worldDAO = daoFactory.getWorldDAO();
@@ -124,25 +124,24 @@ public class DataStorage {
     }
 
     // TODO: maybe put this method into a more appropriate class
-    public ServerPacket getGuildLessonInfo(int guildId) {
-        ServerPacket lessonsData = this.guildLessonsInfo.get(guildId);
-        if (lessonsData == null) {
+    public ServerMessage getGuildLessonInfo(int guildId) {
+        ServerMessage lessonMessage = this.guildLessonsInfo.get(guildId);
+        if (lessonMessage == null) {
             Guild guild = guildRepository.get(guildId);
             if (guild == null) {
                 return null;
             }
-            lessonsData = new ServerPacket(ServerCommands.GuildLessonsInfo)
-                    .add(guildId)
-                    .add(guild.getName());
             List<GuildLesson> guildLessons = new ArrayList<>(guildLessonRepository.get(guildId));
             guildLessons.sort((o1, o2) -> o1.getLevel() - o2.getLevel());
+            List<String> lessonDescriptions = new ArrayList<>(guildLessons.size());
             for (GuildLesson guildLesson : guildLessons) {
-                lessonsData.add(guildLesson.getDescription());
+                lessonDescriptions.add(guildLesson.getDescription());
             }
 
-            this.guildLessonsInfo.put(guildId, lessonsData);
+            lessonMessage = new GuildLessonMessage(guildId, guild.getName(), lessonDescriptions);
+            this.guildLessonsInfo.put(guildId, lessonMessage);
         }
 
-        return lessonsData;
+        return lessonMessage;
     }
 }

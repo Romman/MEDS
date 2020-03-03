@@ -1,14 +1,18 @@
 package org.meds.map;
 
 import org.meds.*;
+import org.meds.enums.CreatureBossTypes;
 import org.meds.enums.MovementDirections;
 import org.meds.enums.Parameters;
 import org.meds.enums.SpecialLocationTypes;
 import org.meds.item.Item;
 import org.meds.item.ItemPrototype;
 import org.meds.item.ItemUtils;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.CorpseListMessage;
+import org.meds.net.message.server.LocationInfoMessage;
+import org.meds.net.message.server.LocationMessage;
+import org.meds.net.message.server.PositionUnitListMessage;
 import org.meds.util.Random;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -31,9 +35,9 @@ public class Location {
     private java.util.Map<ItemPrototype, Item> items;
     private Region region;
 
-    private ServerPacket locationData;
-    private ServerPacket locationInfoData;
-    private ServerPacket neighborsInfoData;
+    private ServerMessage locationMessage;
+    private ServerMessage locationInfoMessage;
+    private List<ServerMessage> neighborsInfoMessages;
 
     /**
      * Indicating whether the location will be updated at the next tick. Use a Setter for setting a value for this field!
@@ -165,76 +169,76 @@ public class Location {
     /**
      * Gets the shorter location info with ServerCommands.LocationInfo
      */
-    public ServerPacket getInfoData() {
-        if (this.locationInfoData == null) {
-            this.locationInfoData =  new ServerPacket(ServerCommands.LocationInfo)
-                .add(this.entry.getId())
-                .add(this.entry.getTitle())
-                .add(this.entry.getTopId())
-                .add(this.entry.getBottomId())
-                .add(this.entry.getNorthId())
-                .add(this.entry.getSouthId())
-                .add(this.entry.getWestId())
-                .add(this.entry.getEastId())
-                .add(this.entry.getxCoord())
-                .add(this.entry.getyCoord())
-                .add(this.entry.getzCoord())
-                .add(this.entry.getSpecialLocationType())
-                .add(this.entry.isSquare() ? "1" : "0")
-                .add(this.region.getName())
-                .add(this.region.getKingdom().getEntry().getName())
-                .add("Continent")
-                .add(this.entry.getRegionId())
-                .add("0"); // TODO: Determine the source of this value.
+    public ServerMessage getInfoData() {
+        if (this.locationInfoMessage == null) {
+            this.locationInfoMessage = new LocationInfoMessage(
+                this.entry.getId(),
+                this.entry.getTitle(),
+                this.entry.getTopId(),
+                this.entry.getBottomId(),
+                this.entry.getNorthId(),
+                this.entry.getSouthId(),
+                this.entry.getWestId(),
+                this.entry.getEastId(),
+                this.entry.getxCoord(),
+                this.entry.getyCoord(),
+                this.entry.getzCoord(),
+                this.entry.getSpecialLocationType(),
+                this.entry.isSquare(),
+                this.region.getName(),
+                this.region.getKingdom().getEntry().getName(),
+                // TODO: Implement Continents
+                "Continent",
+                this.entry.getRegionId()
+            );
         }
-        return this.locationInfoData;
+        return this.locationInfoMessage;
     }
 
-    public ServerPacket getNeighborsInfoData() {
-        if (this.neighborsInfoData == null) {
-            this.neighborsInfoData = new ServerPacket();
+    public List<ServerMessage> getNeighborsInfoData() {
+        if (this.neighborsInfoMessages == null) {
+            this.neighborsInfoMessages = new ArrayList<>();
             Location neighbor;
 
             for (MovementDirections direction : MovementDirections.values()) {
                 if ((neighbor = getNeighbourLocation(direction)) != null) {
-                    this.neighborsInfoData.add(neighbor.getInfoData());
+                    this.neighborsInfoMessages.add(neighbor.getInfoData());
                 }
             }
         }
-        return this.neighborsInfoData;
+        return this.neighborsInfoMessages;
     }
 
-    public ServerPacket getData() {
-        if (this.locationData == null) {
-            this.locationData = new ServerPacket(ServerCommands.Location)
-                .add(this.entry.getId())
-                .add(this.entry.getTitle())
-                .add(this.entry.getTopId())
-                .add(this.entry.getBottomId())
-                .add(this.entry.getNorthId())
-                .add(this.entry.getSouthId())
-                .add(this.entry.getWestId())
-                .add(this.entry.getEastId())
-                .add(this.entry.getxCoord())
-                .add(this.entry.getyCoord())
-                .add(this.entry.getzCoord())
-                .add("Continent") // TODO: Implement continents
-                .add(this.region.getKingdom().getEntry().getName())
-                .add(this.region.getName())
-                .add(this.entry.getSpecialLocationType())
-                .add(this.entry.isSafeZone() ? "true" : "false")
-                .add(this.entry.getKeeperType())
-                .add(this.entry.getKeeperName())
-                .add(this.entry.getSpecialLocationId())
-                .add(this.entry.getPictureId())
-                .add(this.entry.isSquare() ? "1" : "0")
-                .add(this.entry.isSafeRegion() ? "1" : "0")
-                .add(this.entry.getPictureTime())
-                .add(this.entry.getKeeperTime())
-                .add(this.entry.getRegionId())
-                .add("0"); // TODO: Determine the source of this value.
+    public ServerMessage getData() {
+        if (this.locationMessage == null) {
+            this.locationMessage = new LocationMessage(
+                this.entry.getId(),
+                this.entry.getTitle(),
+                this.entry.getTopId(),
+                this.entry.getBottomId(),
+                this.entry.getNorthId(),
+                this.entry.getSouthId(),
+                this.entry.getWestId(),
+                this.entry.getEastId(),
+                this.entry.getxCoord(),
+                this.entry.getyCoord(),
+                this.entry.getzCoord(),
+                this.region.getKingdom().getEntry().getName(),
+                this.region.getName(),
+                this.entry.getSpecialLocationType(),
+                this.entry.isSafeZone(),
+                this.entry.getKeeperType(),
+                this.entry.getKeeperName(),
+                this.entry.getSpecialLocationId(),
+                this.entry.getPictureId(),
+                this.entry.isSquare(),
+                this.entry.isSafeRegion(),
+                this.entry.getPictureTime(),
+                this.entry.getKeeperTime(),
+                this.entry.getRegionId()
+            );
         }
-        return this.locationData;
+        return this.locationMessage;
     }
 
     /**
@@ -334,21 +338,21 @@ public class Location {
     }
 
     /**
-     * Sends the specified packet data to all players at this location
+     * Sends the specified message to all players at this location
      */
-    public void send(ServerPacket packet) {
-        this.send(null, null, packet);
+    public void send(ServerMessage message) {
+        this.send(null, null, message);
     }
 
     /**
-     * Sends the specified packet data to all players at this location
+     * Sends the specified message to all players at this location
      * except the specified unit (but this unit should be a Player class instance).
      */
-    public void send(Unit exception, ServerPacket packet) {
-        this.send(exception, null, packet);
+    public void send(Unit exception, ServerMessage message) {
+        this.send(exception, null, message);
     }
 
-    public void send(Unit exception1, Unit exception2, ServerPacket packet) {
+    public void send(Unit exception1, Unit exception2, ServerMessage message) {
         for (Unit unit : this.units) {
             if (unit.getUnitType() == UnitTypes.Player) {
                 Player pl = (Player) unit;
@@ -361,27 +365,33 @@ public class Location {
                     continue;
                 }
 
-                pl.getSession().send(packet);
+                pl.getSession().send(message);
             }
         }
     }
 
-    public ServerPacket getCorpseData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.CorpseList);
-        packet.add(this.corpses.size() + this.items.size());
+    public ServerMessage getCorpseData() {
         // Corpses
+        List<CorpseListMessage.CorpseLocationInfo> corpses = new ArrayList<>();
         for (Corpse corpse : this.corpses.values()) {
-            packet.add(corpse.getId())
-                .add(corpse.getOwner().getUnitType() == UnitTypes.Player ? "user" : "npc")
-                .add(corpse.getOwner().getName());
+            corpses.add(new CorpseListMessage.CorpseLocationInfo(
+                    corpse.getId(),
+                    corpse.getOwner().getUnitType() == UnitTypes.Player,
+                    corpse.getOwner().getName()
+            ));
         }
+        // Items
+        List<CorpseListMessage.ItemLocationInfo> items = new ArrayList<>();
         for (Item item : this.items.values()) {
-            packet.add(item.getTemplate().getId())
-                .add(item.getModification().getValue())
-                .add(item.getDurability())
-                .add(item.getCount());
+            items.add(new CorpseListMessage.ItemLocationInfo(
+                    item.getTemplate().getId(),
+                    item.getModification(),
+                    item.getDurability(),
+                    item.getCount()
+            ));
         }
-        return packet;
+
+        return new CorpseListMessage(corpses, items);
     }
 
     public List<Player> getPlayers() {
@@ -435,46 +445,42 @@ public class Location {
                 // and this unit should not be an updatable unit
                 if (this.updatedUnit == player) continue;
                 if (player.getSession() == null) continue;
-                ServerPacket pss = new ServerPacket(ServerCommands.PositionUnitList);
-                pss.add(this.units.size() - 1); // exclude itself
-
+                // Size - 1 == exclude itself
+                List<PositionUnitListMessage.UnitInfo> unitInfos = new ArrayList<>(this.units.size() - 1);
                 for (Unit _unit : this.units) {
                     if (_unit == unit) continue;
 
-                    pss.add(_unit.getName());
-                    pss.add(_unit.getId());
-                    pss.add(_unit.getAvatar());
-                    pss.add((int) (73d * _unit.getHealth() / _unit.getParameters().value(Parameters.Health)));
-                    pss.add(_unit.getLevel());
-                    pss.add(_unit.getReligion());
-                    pss.add(_unit.getReligLevel());
-                    if (!_unit.isPlayer() || ((Player) _unit).getGroup() == null) {
-                        pss.add("0"); // Is a Group Leader
-                        pss.add("0"); // Group leader ID
-                    } else {
+                    int health = (int) (73d * _unit.getHealth() / _unit.getParameters().value(Parameters.Health));
+                    int mana = (int) (73d * _unit.getMana() / _unit.getParameters().value(Parameters.Mana));
+                    boolean isGroupLeader = false;
+                    int groupLeaderId = 0;
+                    if (_unit.isPlayer() && ((Player) _unit).getGroup() != null) {
                         Group group = ((Player) _unit).getGroup();
-                        pss.add(group.getLeader() == _unit ? "1" : "0");
-                        pss.add(group.getLeader().getId());
+                        isGroupLeader = group.getLeader() == _unit;
+                        groupLeaderId = group.getLeader().getId();
                     }
-                    pss.add(_unit.getTarget() == null ? 0 : _unit.getTarget().getId());
-                    pss.add("1212413397"); // Avatar Time?
-                    pss.add((int) (73d * _unit.getMana() / _unit.getParameters().value(Parameters.Mana)));
-                    pss.add("0"); // Clan ID
-                    pss.add("0"); // Clan Status
-                    pss.add("0"); // is hidden
-                    pss.add("0"); // is Out of law
-                    pss.add("1"); // Gender
-                    pss.add("0"); // Title
-                    pss.add("0"); // is a Pet
-                    // Boss Type
+                    CreatureBossTypes bossType = CreatureBossTypes.Normal;
                     if (_unit.getUnitType() == UnitTypes.Creature) {
-                        pss.add(((Creature) _unit).getBossType());
-                    } else {
-                        pss.add("0");
+                        bossType = ((Creature) _unit).getBossType();
                     }
+
+                    unitInfos.add(new PositionUnitListMessage.UnitInfo(
+                            _unit.getName(),
+                            _unit.getId(),
+                            _unit.getAvatar(),
+                            health,
+                            _unit.getLevel(),
+                            _unit.getReligion(),
+                            _unit.getReligLevel(),
+                            isGroupLeader,
+                            groupLeaderId,
+                            _unit.getTarget() == null ? 0 : _unit.getTarget().getId(),
+                            mana,
+                            bossType
+                    ));
                 }
 
-                player.getSession().send(pss);
+                player.getSession().send(new PositionUnitListMessage(unitInfos));
             }
         }
 

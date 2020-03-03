@@ -1,12 +1,15 @@
 package org.meds;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.meds.data.domain.CharacterInnItem;
 import org.meds.enums.InnFilters;
 import org.meds.item.Item;
 import org.meds.item.ItemFactory;
 import org.meds.item.ItemPrototype;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.InnMessage;
+import org.meds.net.message.server.ItemInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -105,25 +108,24 @@ public class Inn {
         return true;
     }
 
-    public ServerPacket getInnData() {
+    public ServerMessage getInnData() {
         return this.getInnData(InnFilters.Disabled);
     }
 
-    public ServerPacket getInnData(InnFilters filter) {
-        ServerPacket packet = new ServerPacket(ServerCommands.Inn);
-        packet.add(this.items.size())
-            .add(this.slotCapacity)
-            .add(this.count)
-            .add(this.countCapacity);
-
+    /**
+     * @todo Implement filters
+     */
+    public ServerMessage getInnData(InnFilters filter) {
+        List<ItemInfo> itemInfos = new ArrayList<>(this.items.size());
         for (CharacterInnItem innItem : this.items.values()) {
-            packet.add(innItem.getItemTemplateId())
-                .add(innItem.getModification())
-                .add(innItem.getDurability())
-                .add(innItem.getCount());
+            itemInfos.add(new ItemInfo(
+                    innItem.getItemTemplateId(),
+                    innItem.getModification(),
+                    innItem.getDurability(),
+                    innItem.getCount()
+            ));
         }
-
-        return packet;
+        return new InnMessage(itemInfos, this.slotCapacity, this.count, this.countCapacity);
     }
 
     private void onInnChanged() {

@@ -1,6 +1,8 @@
 package org.meds.spell;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
@@ -8,9 +10,11 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.meds.Player;
 import org.meds.data.domain.Spell;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
 import org.meds.Unit;
+import org.meds.net.message.server.AuraMessage;
+import org.meds.net.message.server.ChatMessage;
+import org.meds.net.message.server.DeleteAuraMessage;
 
 public class Aura {
 
@@ -113,7 +117,7 @@ public class Aura {
     protected void setLevel(int level) {
         this.level = level;
         if (this.ownerPlayer != null && this.ownerPlayer.getSession() != null)
-            this.ownerPlayer.getSession().send(getPacketData());
+            this.ownerPlayer.getSession().send(getBonusMessages());
     }
 
     public int getRemainingTime() {
@@ -135,7 +139,7 @@ public class Aura {
                 if (this.owner.isPlayer()) {
                     Player player = (Player) this.owner;
                     if (player.getSession() != null)
-                        player.getSession().sendServerMessage(1529, this.spellEntry.getName());
+                        player.getSession().send(new ChatMessage(1529, this.spellEntry.getName()));
                 }
                 break;
             case Removed:
@@ -164,15 +168,20 @@ public class Aura {
     protected void removeAura() {
         // If a player - send result
         if (this.ownerPlayer != null && this.ownerPlayer.getSession() != null) {
-            this.ownerPlayer.getSession().send(new ServerPacket(ServerCommands.DeleteAura).add(this.spellEntry.getId()));
+            this.ownerPlayer.getSession().send(new DeleteAuraMessage(this.spellEntry.getId()));
         }
     }
 
-    public ServerPacket getPacketData() {
-        return new ServerPacket(ServerCommands.Aura)
-                .add(this.spellEntry.getId())
-                .add(this.level)
-                .add(this.isPermanent ? "-1" : this.remainingTime / 1000);
+    public List<ServerMessage> getBonusMessages() {
+        List<ServerMessage> messages = new ArrayList<>();
+        if (this.isPermanent) {
+            messages.add(new AuraMessage(this.spellEntry.getId(), this.level));
+        } else {
+            int time = this.remainingTime / 1000;
+            messages.add(new AuraMessage(this.spellEntry.getId(), this.level, time));
+        }
+
+        return messages;
     }
 
     /**
@@ -181,7 +190,7 @@ public class Aura {
     public void forceRemove() {
         // If the owner is a player => send result
         if (this.ownerPlayer != null && this.ownerPlayer.getSession() != null) {
-            this.ownerPlayer.getSession().send(new ServerPacket(ServerCommands.DeleteAura).add(this.spellEntry.getId()));
+            this.ownerPlayer.getSession().send(new DeleteAuraMessage(this.spellEntry.getId()));
         }
     }
 

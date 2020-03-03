@@ -2,6 +2,7 @@ package org.meds.item;
 
 import org.meds.Player;
 import org.meds.enums.Parameters;
+import org.meds.net.message.server.ChatMessage;
 import org.meds.spell.Spell;
 import org.meds.spell.SpellFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,8 +35,9 @@ public class ItemUsageService {
                 // TODO: level checking
                 user.setHealth(user.getParameters().value(Parameters.Health));
                 if (user.getSession() != null) {
-                    user.getSession().sendServerMessage(POTION_HEALING_MESSAGE, item.getTemplate().getTitle(),
-                            Integer.toString(hpToHeal));
+                    user.getSession().send(new ChatMessage(
+                            POTION_HEALING_MESSAGE, item.getTemplate().getTitle(),Integer.toString(hpToHeal)
+                    ));
                 }
                 break;
             case 3581: // Small Mana Potion

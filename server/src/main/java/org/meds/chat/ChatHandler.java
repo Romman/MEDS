@@ -4,8 +4,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.meds.Player;
 import org.meds.World;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.message.server.SocialChatMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -24,9 +24,9 @@ public class ChatHandler {
     @Autowired
     private World world;
 
-    public ServerPacket constructSystemMessage(String message) {
-        return new ServerPacket(ServerCommands.ChatMessage)
-                .add(new StringBuilder(Separator).append(SystemChar).append(message));
+    public ServerMessage constructSystemMessage(String message) {
+        String systemMessage = Separator + SystemChar + message;
+        return new SocialChatMessage(systemMessage);
     }
 
     public void sendSystemMessage(Player player, String message) {
@@ -79,8 +79,7 @@ public class ChatHandler {
         }
 
         // Say this message
-        ServerPacket packet = new ServerPacket(ServerCommands.ChatMessage);
-        StringBuilder response = new StringBuilder()
+        String response = new StringBuilder()
                 .append(Separator)
                 .append(SayChar)
                 .append("[")
@@ -88,11 +87,12 @@ public class ChatHandler {
                 .append("]: ")
                 .append(Separator)
                 .append(MessageSeparator)
-                .append(message);
-        packet.add(response);
+                .append(message)
+                .toString();
+        ServerMessage responseMessage = new SocialChatMessage(response);
 
         // Send to all at the player's region
-        player.getPosition().getRegion().send(packet);
+        player.getPosition().getRegion().send(responseMessage);
     }
 
     public void handleWhisper(Player player, String message) {

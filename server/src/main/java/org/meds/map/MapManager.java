@@ -8,8 +8,7 @@ import org.meds.Unit;
 import org.meds.data.dao.DAOFactory;
 import org.meds.data.dao.MapDAO;
 import org.meds.enums.MovementDirections;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.server.ChatMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
@@ -167,31 +166,30 @@ public class MapManager {
                     mover.setPosition(location);
                 }
 
-                ServerPacket packet = new ServerPacket(ServerCommands.ServerMessage);
+                int messageId;
                 switch (entry.getValue()) {
                     case Up:
-                        packet.add(450);
+                        messageId = 450;
                         break;
                     case Down:
-                        packet.add(451);
+                        messageId = 451;
                         break;
                     case North:
-                        packet.add(452);
+                        messageId = 452;
                         break;
                     case South:
-                        packet.add(453);
+                        messageId = 453;
                         break;
                     case West:
-                        packet.add(454);
+                        messageId = 454;
                         break;
                     case East:
-                        packet.add(455);
+                        messageId = 455;
                         break;
                     default:
-                        break;
+                        throw new IllegalStateException("Attempt to move to unknown direction: " + entry.getValue());
                 }
-                packet.add(mover.getName());
-                prevLocation.send(mover, packet);
+                prevLocation.send(mover, new ChatMessage(messageId, mover.getName()));
             }
 
             this.unitMovement.clear();

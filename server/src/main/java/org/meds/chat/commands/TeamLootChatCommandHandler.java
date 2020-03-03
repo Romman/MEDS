@@ -2,6 +2,8 @@ package org.meds.chat.commands;
 
 import org.meds.Group;
 import org.meds.Player;
+import org.meds.net.Session;
+import org.meds.net.message.server.ChatMessage;
 
 public abstract class TeamLootChatCommandHandler extends AbstractChatCommandHandler {
 
@@ -15,9 +17,10 @@ public abstract class TeamLootChatCommandHandler extends AbstractChatCommandHand
         }
 
         group.setTeamLootMode(getMode());
-        if (player.getSession() != null) {
-            player.getSession().sendServerMessage(group.getTeamLootMode().getModeMessage())
-                    .send(group.getTeamLootData());
+        Session session = player.getSession();
+        if (session != null) {
+            session.send(new ChatMessage(group.getTeamLootMode().getModeMessage()));
+            session.send(group.getTeamLootData());
         }
     }
 }

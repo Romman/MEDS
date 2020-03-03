@@ -9,8 +9,8 @@ import org.meds.database.Repository;
 import org.meds.enums.AchievementCategories;
 import org.meds.enums.AchievementCriterionTypes;
 import org.meds.enums.Currencies;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.server.AchievementUpdateMessage;
+import org.meds.net.message.server.AchievementsMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -166,29 +166,30 @@ public class AchievementManager {
     }
 
     private void sendAchievementUpdate(CharacterAchievement charAchieve) {
-        if (this.player.getSession() == null)
+        if (this.player.getSession() == null) {
             return;
-        ServerPacket packet = new ServerPacket(ServerCommands.AchievementUpdate);
-        packet.add(charAchieve.getAchievementId());
-        packet.add(charAchieve.getProgress());
-        this.player.getSession().send(packet);
+        }
+        this.player.getSession().send(new AchievementUpdateMessage(
+                charAchieve.getAchievementId(), charAchieve.getProgress()
+        ));
     }
 
     private void sendAchievementComplete(Achievement achievement, CharacterAchievement charAchieve) {
-        if (this.player.getSession() == null)
+        if (this.player.getSession() == null) {
             return;
-        ServerPacket packet = new ServerPacket(ServerCommands.AchievementList);
-        packet.add(1); // Achievement Complete list
+        }
 
-        packet.add(achievement.getId());
-        packet.add(achievement.getTitle());
-        packet.add(achievement.getDescription());
-        packet.add(charAchieve.getProgress());
-        packet.add(achievement.getCount());
-        packet.add(charAchieve.getCompleteDate());
-        packet.add(achievement.getCategoryId());
-        packet.add(achievement.getPoints());
+        AchievementsMessage.AchievementInfo info = new AchievementsMessage.AchievementInfo(
+                achievement.getId(),
+                achievement.getTitle(),
+                achievement.getDescription(),
+                charAchieve.getProgress(),
+                achievement.getCount(),
+                charAchieve.getCompleteDate(),
+                achievement.getCategoryId(),
+                achievement.getPoints()
+        );
 
-        this.player.getSession().send(packet);
+        this.player.getSession().send(new AchievementsMessage(Collections.singletonList(info)));
     }
 }

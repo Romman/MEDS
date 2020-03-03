@@ -7,8 +7,15 @@ import org.meds.data.domain.CreatureTemplate;
 import org.meds.database.Repository;
 import org.meds.enums.CreatureTypes;
 import org.meds.map.MapManager;
-import org.meds.net.ServerCommands;
-import org.meds.net.ServerPacket;
+import org.meds.net.message.ServerMessage;
+import org.meds.net.Session;
+import org.meds.net.message.server.DayTimeMessage;
+import org.meds.net.message.server.PlayerListAddMessage;
+import org.meds.net.message.server.PlayerListDeleteMessage;
+import org.meds.net.message.server.PlayerListUpdateMessage;
+import org.meds.net.message.server.PlayerOnlineInfo;
+import org.meds.net.message.server.PlayersOnlineMessage;
+import org.meds.net.message.server.ServerTimeMessage;
 import org.meds.server.Server;
 import org.meds.util.Random;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,9 +47,9 @@ public class World implements Runnable {
     private HashMap<Integer, Unit> units;
     private HashMap<Integer, Player> players;
 
-    private ServerPacket addPlayersPacket;
-    private ServerPacket updatePlayersPacket;
-    private ServerPacket deletePlayersPacket;
+    private final List<ServerMessage> addPlayersMessages;
+    private final List<ServerMessage> updatePlayersMessages;
+    private final List<ServerMessage> deletePlayersMessages;
 
     private final List<Battle> battles;
     private final LinkedList<Battle> newBattles;
@@ -57,9 +64,9 @@ public class World implements Runnable {
     private World() {
         this.players = new HashMap<>();
         this.units = new HashMap<>();
-        this.addPlayersPacket = new ServerPacket();
-        this.updatePlayersPacket = new ServerPacket();
-        this.deletePlayersPacket = new ServerPacket();
+        this.addPlayersMessages = new ArrayList<>();
+        this.updatePlayersMessages = new ArrayList<>();
+        this.deletePlayersMessages = new ArrayList<>();
 
         this.battles = new ArrayList<>();
         this.newBattles = new LinkedList<>();
@@ -82,58 +89,62 @@ public class World implements Runnable {
         this.units.put(player.getId(), player);
 
         logger.debug("World: adding a new {}", player);
-        this.addPlayersPacket.add(ServerCommands.PlayersListAdd)
-            .add(player.getId())
-            .add(player.getName())
-            .add(player.getLevel())
-            .add(player.getReligion())
-            .add(player.getReligLevel())
-            .add(player.getGroup() != null && player.getGroup().getLeader() == player ? "1" : "0")
-            .add(player.getStatuses())
-            .add(player.getClanId())
-            .add(player.getClanMemberStatus())
-            .add("0"); // Religion Status
+        PlayerOnlineInfo playerInfo = new PlayerOnlineInfo(player.getId(),
+                player.getName(),
+                player.getLevel(),
+                player.getReligion(),
+                player.getReligLevel(),
+                player.getGroup() != null && player.getGroup().getLeader() == player,
+                player.getStatuses().getValue(),
+                player.getClanId(),
+                player.getClanMemberStatus().getValue(),
+                0 // Religion Status. Always 0 while religion is not implemented
+        );
+        this.addPlayersMessages.add(new PlayerListAddMessage(playerInfo));
         logger.debug("World: addPlayersPacket has been updated");
     }
 
     public void playerLoggedOut(Player player) {
         this.units.remove(player.getId());
         this.players.remove(player.getId());
-        this.deletePlayersPacket.add(ServerCommands.PlayersListDelete).add(player.getId());
+        this.deletePlayersMessages.add(
+                new PlayerListDeleteMessage(player.getId())
+        );
         logger.debug("{} just logged out.", player);
     }
 
     public void playerUpdated(Player player) {
-        this.updatePlayersPacket.add(ServerCommands.PlayersListUpdate)
-            .add(player.getId())
-            .add(player.getLevel())
-            .add(player.getReligion())
-            .add(player.getReligLevel())
-            // Next value sometimes is 4 or 5 (possibly related to pets)
-            .add(player.getGroup() != null && player.getGroup().getLeader() == player ? "1" : "0")
-            .add(player.getClanId())
-            .add(player.getClanMemberStatus())
-            .add("0");
+        this.updatePlayersMessages.add(new PlayerListUpdateMessage(
+                player.getId(),
+                player.getLevel(),
+                player.getReligion(),
+                player.getReligLevel(),
+                player.getGroup() != null && player.getGroup().getLeader() == player,
+                player.getClanId(),
+                player.getClanMemberStatus().getValue(),
+                0
+        ));
     }
 
-    public ServerPacket getOnlineData() {
-        ServerPacket packet = new ServerPacket(ServerCommands.OnlineList);
-        packet.add(this.players.size());
+    public ServerMessage getOnlineData() {
+        List<PlayerOnlineInfo> playerInfos;
         synchronized (this.players) {
+            playerInfos = new ArrayList<>(this.players.size());
             for (Player player : this.players.values()) {
-                packet.add(player.getId())
-                    .add(player.getName())
-                    .add(player.getLevel())
-                    .add(player.getReligion())
-                    .add(player.getReligLevel())
-                    .add(player.getGroup() != null && player.getGroup().getLeader() == player ? "1" : "0")
-                    .add(player.getStatuses())
-                    .add(player.getClanId())
-                    .add(player.getClanMemberStatus())
-                    .add("0");
+                playerInfos.add(new PlayerOnlineInfo(player.getId(),
+                        player.getName(),
+                        player.getLevel(),
+                        player.getReligion(),
+                        player.getReligLevel(),
+                        player.getGroup() != null && player.getGroup().getLeader() == player,
+                        player.getStatuses().getValue(),
+                        player.getClanId(),
+                        player.getClanMemberStatus().getValue(),
+                        0
+                ));
             }
         }
-        return packet;
+        return new PlayersOnlineMessage(playerInfos);
     }
 
     public Player getPlayer(int id) {
@@ -212,23 +223,33 @@ public class World implements Runnable {
         this.units.put(unit.getId(), unit);
     }
 
-    public ServerPacket getDayTimeData() {
-        String day = this.dayTime < 360000 ? "0" : "1";
-        String time = this.dayTime < 360000 ? Integer.toString(this.dayTime / 1000) : Integer.toString(this.dayTime / 1000 - 360);
+    public ServerMessage getDayTimeData() {
+        boolean isDaytime = this.dayTime < 360000;
+        int time = isDaytime ? this.dayTime / 1000 : this.dayTime / 1000 - 360;
 
-        return new ServerPacket(ServerCommands.DayTime)
-            .add(day)
-            .add(time);
+        return new DayTimeMessage(!isDaytime, time);
     }
 
     /**
      * Sends the specified packet to all players in the game.
      */
-    public void send(ServerPacket packet) {
+    public void send(ServerMessage message) {
         synchronized (this.players) {
-            for (Player player : this.players.values())
-                if (player.getSession() != null)
-                    player.getSession().send(packet);
+            for (Player player : this.players.values()) {
+                if (player.getSession() != null) {
+                    player.getSession().send(message);
+                }
+            }
+        }
+    }
+
+    public void send(Iterable<ServerMessage> messages) {
+        synchronized (this.players) {
+            for (Player player : this.players.values()) {
+                if (player.getSession() != null) {
+                    player.getSession().send(messages);
+                }
+            }
         }
     }
 
@@ -325,24 +346,24 @@ public class World implements Runnable {
         }
 
         // Update online lists
-        synchronized (this.deletePlayersPacket) {
-            if (!this.deletePlayersPacket.isEmpty()) {
-                send(this.deletePlayersPacket);
-                this.deletePlayersPacket.clear();
+        synchronized (this.deletePlayersMessages) {
+            if (!this.deletePlayersMessages.isEmpty()) {
+                send(this.deletePlayersMessages);
+                this.deletePlayersMessages.clear();
             }
         }
 
-        synchronized (this.updatePlayersPacket) {
-            if (!this.updatePlayersPacket.isEmpty()) {
-                send(this.updatePlayersPacket);
-                this.updatePlayersPacket.clear();
+        synchronized (this.updatePlayersMessages) {
+            if (!this.updatePlayersMessages.isEmpty()) {
+                send(this.updatePlayersMessages);
+                this.updatePlayersMessages.clear();
             }
         }
 
-        synchronized (this.addPlayersPacket) {
-            if (!this.addPlayersPacket.isEmpty()) {
-                send(this.addPlayersPacket);
-                this.addPlayersPacket.clear();
+        synchronized (this.addPlayersMessages) {
+            if (!this.addPlayersMessages.isEmpty()) {
+                send(this.addPlayersMessages);
+                this.addPlayersMessages.clear();
             }
         }
 
@@ -351,9 +372,12 @@ public class World implements Runnable {
 
         // Add Server Time Data and send the packet
         synchronized (this.players) {
-            for (java.util.Map.Entry<Integer, Player> entry : this.players.entrySet())
-                if (entry.getValue().getSession() != null)
-                    entry.getValue().getSession().send(new ServerPacket(ServerCommands.ServerTime).add(server.getUptimeMillis()));
+            for (java.util.Map.Entry<Integer, Player> entry : this.players.entrySet()) {
+                Session session = entry.getValue().getSession();
+                if (session != null) {
+                    session.send(new ServerTimeMessage(server.getUptimeMillis()));
+                }
+            }
         }
 
         org.meds.net.Session.sendBuffers();
