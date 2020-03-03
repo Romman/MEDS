@@ -1,10 +1,10 @@
 package org.meds;
 
 import org.meds.data.domain.CharacterQuest;
-import org.meds.data.domain.CreatureTemplate;
 import org.meds.data.domain.Currency;
 import org.meds.data.domain.QuestTemplate;
 import org.meds.database.Repository;
+import org.meds.database.repository.CurrencyRepository;
 import org.meds.enums.Currencies;
 import org.meds.enums.QuestStatuses;
 import org.meds.enums.QuestTypes;
@@ -13,7 +13,6 @@ import org.meds.net.message.server.ChatMessage;
 import org.meds.net.message.server.QuestFinalTextMessage;
 import org.meds.net.message.server.QuestListInfoMessage;
 import org.meds.net.message.server.QuestUpdateMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
 
@@ -47,13 +46,6 @@ public class Quest {
         }
     }
 
-    @Autowired
-    private Locale locale;
-    @Autowired
-    private Repository<CreatureTemplate> creatureTemplateRepository;
-    @Autowired
-    private Repository<Currency> currencyRepository;
-
     private static final long serialVersionUID = 1L;
 
     private CharacterQuest characterQuest;
@@ -64,10 +56,16 @@ public class Quest {
 
     private Unit.KillingBlowListener killingBlowHandler;
 
-    public Quest(Player player, QuestTemplate template, CharacterQuest quest) {
+    // TODO: This is a Spring component and should not be in this class.
+    //  Or convert this class to a prototype bean(bad idea)
+    private final Repository<Currency> currencyRepository;
+
+    public Quest(Player player, QuestTemplate template, CharacterQuest quest,
+                 Repository<Currency> currencyRepository) {
         this.player = player;
         this.questTemplate = template;
         this.characterQuest = quest;
+        this.currencyRepository = currencyRepository;
     }
 
     public QuestTemplate getQuestTemplate() {

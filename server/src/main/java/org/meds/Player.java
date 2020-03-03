@@ -589,9 +589,10 @@ public class Player extends Unit {
         // Accept all the quests
         this.quests = new HashMap<>();
         for (CharacterQuest charQuest : this.info.getQuests().values()) {
-            Quest quest = new Quest(this, questTemplateRepository.get(charQuest.getQuestTemplateId()), charQuest);
+            QuestTemplate template = questTemplateRepository.get(charQuest.getQuestTemplateId());
+            Quest quest = new Quest(this, template, charQuest, this.currencyRepository);
             quest.accept();
-            this.quests.put(quest.getQuestTemplate().getId(), quest);
+            this.quests.put(template.getId(), quest);
         }
 
         // Create profession handlers
@@ -1325,7 +1326,7 @@ public class Player extends Unit {
             charQuest.setCharacterId(this.getId());
             charQuest.setQuestTemplateId(template.getId());
             this.info.getQuests().put(questId, charQuest);
-            quest = new Quest(this, template, charQuest);
+            quest = new Quest(this, template, charQuest, this.currencyRepository);
             this.quests.put(questId, quest);
         }
 
