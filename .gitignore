@@ -10,3 +10,7 @@ src/main/resources/hibernate.cfg.xml
 
 # Maven Target directory
 target/
+
+# Server logs folder
+# Appears only when the server is running in debug mode (run with IDE applications)
+logs/
