@@ -21,7 +21,8 @@ public class AchievementsMessage implements ServerMessage {
 
     @Override
     public void serialize(MessageWriteStream stream) {
-        stream.writeInt(this.achievements.size());
+        // 0?
+        stream.writeInt(0);
         for (AchievementInfo achievement : this.achievements) {
             stream.writeInt(achievement.id);
             stream.writeString(achievement.title);
@@ -31,7 +32,12 @@ public class AchievementsMessage implements ServerMessage {
             stream.writeInt(achievement.completeDate);
             stream.writeInt(achievement.categoryId);
             stream.writeInt(achievement.points);
+            stream.writeString(achievement.unk9);
+            stream.writeString(achievement.unk10);
         }
+        // Empty value at the end
+        // Or is it just an artifact?
+        stream.writeString("");
     }
 
     public static class AchievementInfo {
@@ -46,6 +52,9 @@ public class AchievementsMessage implements ServerMessage {
 
         private final int categoryId;
         private final int points;
+
+        private final String unk9 = "";
+        private final String unk10 = "000000";
 
         public AchievementInfo(int id, String title, String description, int progress, int required,
                                int completeDate, int categoryId, int points) {

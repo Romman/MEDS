@@ -23,6 +23,9 @@ public class EquipmentMessage implements ServerMessage {
     public void serialize(MessageWriteStream stream) {
         for (ItemInfo item : this.items) {
             item.serialize(stream);
+            // TODO: 5th field of the ItemInfo?
+            stream.writeInt(0);
+
         }
     }
 }

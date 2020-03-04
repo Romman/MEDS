@@ -79,6 +79,10 @@ public class PlayerInfoMessage implements ServerMessage {
      */
     private final int religiousStatus = 0;
 
+    private final int unk40 = 0;
+    private final String unk41 = "";
+    private final int unk42 = 0;
+
     public PlayerInfoMessage(int id, String name, int avatarId, int race, int clanId,
                              int clanMemberStatus,
                              int baseInt, int baseCon, int baseStr, int baseDex,
@@ -165,5 +169,8 @@ public class PlayerInfoMessage implements ServerMessage {
         stream.writeInt(this.unk37);
         stream.writeInt(this.gender);
         stream.writeInt(this.religiousStatus);
+        stream.writeInt(this.unk40);
+        stream.writeString(this.unk41);
+        stream.writeInt(this.unk42);
     }
 }

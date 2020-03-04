@@ -39,8 +39,8 @@ public class SocketIOServer implements Server {
         }
     }
 
-    private static final int BUILD = 33554443; // 2.0.0.11
-    private static final int MAX_ALLOWED_BUILD = 33555200; // 2.0.3.0
+    private static final int BUILD = 33621507; // 2.1.6.3
+    private static final int MAX_ALLOWED_BUILD = 33620995; // 2.1.5.3
 
     @Autowired
     private ApplicationContext applicationContext;

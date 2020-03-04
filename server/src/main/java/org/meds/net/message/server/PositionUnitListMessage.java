@@ -55,11 +55,19 @@ public class PositionUnitListMessage implements ServerMessage {
         private final int clanStatus = 0;
         private final boolean isHidden = false;
         private final boolean outOfLaw = false;
+        /**
+         * Looks like not a gender
+         * Mostly 0
+         * Found a player with 101
+         */
         private final int gender = 1;
         private final int title = 0;
         private final boolean isPet = false;
-
         private final CreatureBossTypes bossType;
+
+        private final int unk21 = 0;
+        private final String unk22 = "";
+        private final int unk23 = 0;
 
         public UnitInfo(String name, int id, int avatar, int health, int level, Religions religion, int religionLevel,
                         boolean isGroupLeader, int groupLeaderId, int targetId, int mana, CreatureBossTypes bossType) {
@@ -98,6 +106,9 @@ public class PositionUnitListMessage implements ServerMessage {
             stream.writeInt(this.title);
             stream.writeBoolean(this.isPet);
             stream.writeInt(this.bossType.getValue());
+            stream.writeInt(this.unk21);
+            stream.writeString(this.unk22);
+            stream.writeInt(this.unk23);
         }
     }
 }

@@ -9,17 +9,19 @@ import org.meds.net.message.ServerMessageIdentity;
 public class InventoryMessage implements ServerMessage {
 
     /**
-     * Count of bought additional slots
+     * Count of bought additional slots.
+     * 50 by default
      */
-    private final int slotsPurchased = 0;
+    private final int slotsPurchased = 50;
     /**
      * Cost of new slots
      */
-    private final String newSlotCost = "5 platinum";
+    private final String newSlotCost = "";
     /**
-     *  Current available count of slots
+     * Current available count of slots
+     * 25 inventory slots + 50 additional slots
      */
-    private final int currentSlots = 25;
+    private final int currentSlots = 75;
 
     private final Collection<ItemInfo> items;
 

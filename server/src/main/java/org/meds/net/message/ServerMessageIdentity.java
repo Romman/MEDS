@@ -10,6 +10,7 @@ public enum ServerMessageIdentity implements MessageIdentity {
     TradeResult("ch_res"),
     CultInfo("ci"),
     BonusMagicParameter("cms"),
+    _cmms("cmms"), // Appeared in 2.1.5.3 or lower
     UpdateQuest("cq"),
     _cs("cs"),
     DeleteAura("d"),
@@ -54,6 +55,13 @@ public enum ServerMessageIdentity implements MessageIdentity {
     SocialChatMessage("msg"),
     MessageList("msl"),
     NoGo("ng"),
+    /**
+     * TODO: Permanent effects like auto-focus for attacks or PowerUp turned-on
+     * Displayed as an icon above the buttons panel
+     * [1] {number} - effect number
+     * [2] {number} - "1" is turned ON; "0" is turned off
+     * [3] {number|string} - "0" or title (popup text)
+     */
     _omg("omg"),
     PlayerLocation("pl"), // Appeared in 2.0.0.0
     PlayersLocation("pll"), // Appeared in 2.0.0.0
@@ -84,6 +92,9 @@ public enum ServerMessageIdentity implements MessageIdentity {
     Version("version"),
     Currency("w$"), // Appeared in 1.2.7.6
     BattleState("war"),
+    // TODO: Implement weight
+    //  [1] {number} - used weight
+    //  [2] {number} - available
     _wg("wg"),
     _zzz("zzz");
 

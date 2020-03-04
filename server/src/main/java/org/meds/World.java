@@ -94,7 +94,6 @@ public class World implements Runnable {
                 player.getLevel(),
                 player.getReligion(),
                 player.getReligLevel(),
-                player.getGroup() != null && player.getGroup().getLeader() == player,
                 player.getStatuses().getValue(),
                 player.getClanId(),
                 player.getClanMemberStatus().getValue(),
@@ -119,7 +118,6 @@ public class World implements Runnable {
                 player.getLevel(),
                 player.getReligion(),
                 player.getReligLevel(),
-                player.getGroup() != null && player.getGroup().getLeader() == player,
                 player.getClanId(),
                 player.getClanMemberStatus().getValue(),
                 0
@@ -136,7 +134,6 @@ public class World implements Runnable {
                         player.getLevel(),
                         player.getReligion(),
                         player.getReligLevel(),
-                        player.getGroup() != null && player.getGroup().getLeader() == player,
                         player.getStatuses().getValue(),
                         player.getClanId(),
                         player.getClanMemberStatus().getValue(),
