@@ -6,7 +6,7 @@ public interface Server {
 
     int getBuildVersion();
 
-    int getMaxAllowedBuildVersion();
+    int getMinSupportedVersion();
 
     void start();
 

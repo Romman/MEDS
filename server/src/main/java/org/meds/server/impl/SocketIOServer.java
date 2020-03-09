@@ -40,7 +40,7 @@ public class SocketIOServer implements Server {
     }
 
     private static final int BUILD = 33621507; // 2.1.6.3
-    private static final int MAX_ALLOWED_BUILD = 33620995; // 2.1.5.3
+    private static final int SUPPORTED_VERSION = 33620995; // 2.1.5.3
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -88,8 +88,8 @@ public class SocketIOServer implements Server {
     }
 
     @Override
-    public int getMaxAllowedBuildVersion() {
-        return MAX_ALLOWED_BUILD;
+    public int getMinSupportedVersion() {
+        return SUPPORTED_VERSION;
     }
 
     @Override

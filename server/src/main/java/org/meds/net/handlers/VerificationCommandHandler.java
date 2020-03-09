@@ -2,7 +2,6 @@ package org.meds.net.handlers;
 
 import org.meds.net.*;
 import org.meds.net.message.ServerMessage;
-import org.meds.net.message.ServerMessageIdentity;
 import org.meds.net.message.server.VersionMessage;
 import org.meds.server.Server;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +31,7 @@ public class VerificationCommandHandler extends CommonClientCommandHandler {
             message = new VersionMessage();
         } else {
             int clientBuild = data.getInt(0);
-            if (clientBuild < server.getBuildVersion() || clientBuild > server.getMaxAllowedBuildVersion()) {
+            if (clientBuild > server.getBuildVersion() || clientBuild < server.getMinSupportedVersion()) {
                 message = new VersionMessage();
             } else {
                 message = new VersionMessage(server.getBuildVersion(), sessionContext.getSession().getKey());
