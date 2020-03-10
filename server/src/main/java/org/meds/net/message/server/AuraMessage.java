@@ -33,6 +33,8 @@ public class AuraMessage implements ServerMessage {
 
     @Override
     public void serialize(MessageWriteStream stream) {
-
+        stream.writeInt(this.spellId);
+        stream.writeInt(this.level);
+        stream.writeInt(this.remainingTime);
     }
 }
