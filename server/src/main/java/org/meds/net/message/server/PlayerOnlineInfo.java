@@ -11,7 +11,9 @@ public class PlayerOnlineInfo {
     private final Religions religion;
     private final int religionLevel;
 
-    // one of it
+    /**
+     * Mostly 4 or 0. And rarely 6
+     */
     private final int unk6 = 4;
 
     private final int statuses;

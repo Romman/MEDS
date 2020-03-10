@@ -5,6 +5,9 @@ import org.meds.net.message.MessageWriteStream;
 import org.meds.net.message.ServerMessage;
 import org.meds.net.message.ServerMessageIdentity;
 
+/**
+ * TODO: Message has no fix parameters but may have repeatable sequence of these two parameters
+ */
 public class AchievementUpdateMessage implements ServerMessage {
 
     private final int achievementId;

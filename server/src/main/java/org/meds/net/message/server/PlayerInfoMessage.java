@@ -61,9 +61,9 @@ public class PlayerInfoMessage implements ServerMessage {
      */
     private final int startServerTime = 1367478137;
     /**
-     * TODO: Version (or Version of what???)
+     * TODO: Server Version? (current server version or what??)
      */
-    private final int unk35 = 16909320;
+    private final int unk35 = 33620995;
     private final int inventoryCapacity;
     /**
      * ???
@@ -79,6 +79,9 @@ public class PlayerInfoMessage implements ServerMessage {
      */
     private final int religiousStatus = 0;
 
+    /**
+     * 0 or 2
+     */
     private final int unk40 = 0;
     private final String unk41 = "";
     private final int unk42 = 0;

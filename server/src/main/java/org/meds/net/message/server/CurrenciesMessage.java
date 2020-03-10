@@ -29,6 +29,7 @@ public class CurrenciesMessage implements ServerMessage {
             stream.writeInt(info.unk5);
             stream.writeBoolean(info.disabled);
             stream.writeInt(info.amount);
+            stream.writeInt(info.unk8);
         }
     }
 
@@ -38,9 +39,16 @@ public class CurrenciesMessage implements ServerMessage {
         private final int unk2;
         private final String title;
         private final String description;
+        /**
+         * Picture(icon) date
+         */
         private final int unk5;
         private final boolean disabled;
         private final int amount;
+        /**
+         * Max available amount?
+         */
+        private final int unk8 = 0;
 
         public CurrencyInfo(int id, int unk2, String title, String description, int unk5,
                             boolean disabled, int amount) {

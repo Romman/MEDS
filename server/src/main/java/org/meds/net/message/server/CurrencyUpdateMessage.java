@@ -9,6 +9,12 @@ public class CurrencyUpdateMessage implements ServerMessage {
 
     private final int id;
     private final int amount;
+    /**
+     * Boolean?
+     * or Max available amount?
+     * Each currency has 0 except one which has 1 (Roulette ticket)
+     */
+    private final int unk3 = 0;
 
     public CurrencyUpdateMessage(int id, int amount) {
         this.id = id;
@@ -24,5 +30,6 @@ public class CurrencyUpdateMessage implements ServerMessage {
     public void serialize(MessageWriteStream stream) {
         stream.writeInt(this.id);
         stream.writeInt(this.amount);
+        stream.writeInt(this.unk3);
     }
 }

@@ -27,6 +27,9 @@ public class LocationMessage implements ServerMessage {
     private final String kingdomName;
     private final String regionName;
     private final SpecialLocationTypes specialLocationType;
+    /**
+     * There are 2 possible values as a string - "true" and "false"
+     */
     private final boolean safeZone;
     private final int keeperType;
     private final String keeperName;
@@ -38,7 +41,7 @@ public class LocationMessage implements ServerMessage {
     private final int keeperTime;
     private final int regionId;
     /**
-     * TODO: Determine the source of this value.
+     * Looks like the item id as a key to get into this location.
      *  The same as in {@link LocationInfoMessage}
      */
     private final int unk26 = 0;
@@ -96,7 +99,7 @@ public class LocationMessage implements ServerMessage {
         stream.writeString(kingdomName);
         stream.writeString(regionName);
         stream.writeInt(this.specialLocationType.getValue());
-        stream.writeBoolean(this.safeZone);
+        stream.writeString(this.safeZone ? "true" : "false");
         stream.writeInt(this.keeperType);
         stream.writeString(this.keeperName);
         stream.writeInt(this.specialLocationId);
