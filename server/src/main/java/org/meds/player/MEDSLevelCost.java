@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
  *
  * This calculator used to be appropriated for versions about 2.0.3.x
  */
-@Component
 public class MEDSLevelCost implements LevelCost {
 
     /**

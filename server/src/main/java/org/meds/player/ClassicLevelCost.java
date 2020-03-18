@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
  * Level Cost calculator for versions 2.1+
  * TODO: Use the component with teh active "Classic" profile only
  */
+@Component
 public class ClassicLevelCost implements LevelCost {
 
     /**
